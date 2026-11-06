@@ -4,6 +4,13 @@ const { levels, types, pools, questions } = await fetch("./questions.json").then
 const $ = (id) => document.getElementById(id);
 const main = document.querySelector("main");
 const input = $("answer");
+const vv = visualViewport;
+// iOS はフォーカスを残したままキーボードだけ閉じることがあり、そうなると focus() もタップも効かなくなる。
+// キーボードが出ていない (見えている高さが画面とほぼ同じ) のにフォーカスがあれば、いったん外してから付け直す
+const focus = () => {
+  if (document.activeElement === input && innerHeight - vv.height < 100) input.blur();
+  input.focus();
+};
 // grade の結果を3段に畳む。case (大文字小文字だけ違う) と accent (アクサンだけ違う) は部分正解
 const bucket = (r) => (r === "correct" || r === "wrong" ? r : "partial");
 const MARK = { correct: "◎", partial: "△", wrong: "×" };
@@ -69,9 +76,17 @@ function next() {
   input.value = "";
   input.placeholder = n ? "" : q.cue ?? "";
   input.readOnly = false;
-  input.focus();
+  focus();
   shown = Date.now();
+  // 問題が変わったのがわかるように、ふわっと出す
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+    main.animate([{ opacity: 0, transform: "translateY(.6rem)" }, {}], { duration: 400, easing: "ease-out" });
 }
+
+// 入力欄をタップしたら必ずキーボードが開くように。タップでフォーカスが付き直る前に外しておく
+input.addEventListener("touchstart", () => {
+  if (innerHeight - vv.height < 100) input.blur();
+});
 
 // 形を変えて書く問題 (cue があるもの: 動詞の活用、à → au など) は placeholder に薄く入れるだけで、書くのは自分。
 // 語群の語をそのまま書く問題は答えを埋める
@@ -81,7 +96,7 @@ $("choices").onclick = (e) => {
   for (const x of $("choices").children) x.ariaPressed = String(x === b);
   if (q.cue) input.placeholder = b.textContent;
   else input.value = b.textContent;
-  input.focus();
+  focus();
 };
 
 // Enter 1回目で採点 (空なら無回答で ×)、2回目で次へ
@@ -126,7 +141,6 @@ $("keys").onclose = () => input.focus();
 // 押してもフォーカスを入力欄から動かさず、キーボードを閉じない
 $("actions").onmousedown = (e) => e.preventDefault();
 // iOS はキーボードが出ても画面 (layout viewport) が縮まず、下端に固定したボタンが隠れる。見えている範囲の下端まで持ち上げる
-const vv = visualViewport;
 const lift = () => { $("actions").style.transform = `translateY(${Math.min(0, vv.offsetTop + vv.height - innerHeight)}px)`; };
 vv.addEventListener("resize", lift);
 vv.addEventListener("scroll", lift);

@@ -172,6 +172,9 @@
   }
   footer button:disabled { opacity: .4; cursor: default; }
   #reset { margin-left: auto; color: var(--ink-soft); }
+  /* 答え合わせのあとだけ出す。キーボードを閉じると Enter が押せないので、その代わり */
+  #next { flex-basis: 100%; padding-block: .7rem; font-size: 1rem; font-weight: 600; color: var(--paper); background: var(--ink); border-color: var(--ink); }
+  main:not([data-result]) ~ footer #next { display: none; }
 
   /* アクサン入力の早見表。data-os に合わせて片方の section だけ見せる */
   #keys {
@@ -242,6 +245,7 @@
 </main>
 <p id="empty" hidden>間違えた問題はありません。<small>「全問から出題する」で全問にもどれます。</small></p>
 <footer>
+  <button id="next" type="button">次にすすむ</button>
   <button id="mode" type="button"></button>
   <button id="open-keys" type="button">アクサンの入力方法</button>
   <button id="reset" type="button">記録をリセット</button>

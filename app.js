@@ -41,6 +41,7 @@ function render() {
 
 // ponytail: 山札を切って配り、尽きたら切り直すだけ
 function next() {
+  delete main.dataset.result;
   // 復習モードで間違えた問題がなくなっても、モードは下のボタンで戻すまで変えない
   const none = state.mode === "missed" && !pool.some(isMissed);
   main.hidden = none;
@@ -52,7 +53,6 @@ function next() {
     .sort((a, b) => (b.id in state.results) - (a.id in state.results));
   q = instantiate(deck.pop(), pools); // 人名や数をここで埋める。id はそのまま
   const { label, choices: n } = types[q.type];
-  delete main.dataset.result;
   $("type").textContent = label;
   $("hint").textContent = q.hint ?? "";
   $("a").textContent = q.a ?? "";
@@ -119,6 +119,8 @@ $("keys").querySelector(".seg").onclick = (e) => e.target.dataset.os && setOs(e.
 $("open-keys").onclick = () => $("keys").showModal();
 $("keys").onclick = (e) => e.target === $("keys") && $("keys").close(); // 枠の外 (背景) を押したら閉じる
 $("keys").onclose = () => input.focus();
+
+$("next").onclick = () => next(); // タップの中で focus するので、スマホのキーボードもまた開く
 
 $("mode").onclick = () => {
   state.mode = state.mode === "missed" ? "all" : "missed";

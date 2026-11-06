@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content">
+<title>Petit Quiz Futsuken | 仏検の1問1答</title>
+<meta name="description" content="仏検の筆記問題を、1問1答の入力式で解き続けるクイズ。">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600&family=Bodoni+Moda:opsz,wght@6..96,400..600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #FCFCFA;
+    --ink: #1A2440;
+    --ink-soft: #616A88;
+    --rule: #D9D4E6;
+    --ok: #1E7A5B;
+    --part: #A86A00;
+    --ng: #C4453C;
+    --focus: #3B57C4;
+    --display: "Bodoni Moda", "Hiragino Mincho ProN", serif;
+    --body: "Archivo", "Zen Kaku Gothic New", system-ui, "Hiragino Sans", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #11131C;
+      --ink: #E9EAF3;
+      --ink-soft: #9098B4;
+      --rule: #34364A;
+      --ok: #55C296;
+      --part: #E8B04B;
+      --ng: #F07C72;
+      --focus: #8FA3FF;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    -webkit-text-size-adjust: 100%;
+  }
+  header, main, footer { width: 100%; max-width: 44rem; margin-inline: auto; }
+
+  /* 見出しと成績。成績は「最後に答えた結果」を問題ごとに数えたもの。下の帯は全問に対する割合 */
+  header { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: .9rem 1rem; }
+  h1 { font: italic 500 1.3rem var(--display); margin: 0; }
+  #stats { display: flex; gap: 1.25rem; margin: 0; }
+  #stats div { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; }
+  #stats dt { font-size: .7rem; color: var(--ink-soft); white-space: nowrap; }
+  #stats dt::before {
+    content: "";
+    display: inline-block;
+    width: .5rem;
+    height: .5rem;
+    margin-right: .3rem;
+    border-radius: 50%;
+    background: var(--c, transparent);
+  }
+  #stats dd { margin: 0; font: 600 1.4rem/1 var(--body); font-variant-numeric: tabular-nums; color: var(--c, var(--ink)); }
+  #stats .total { padding-left: 1.25rem; border-left: 1px solid var(--rule); }
+  #stats .total dt::before { display: none; }
+  .ok { --c: var(--ok); }
+  .part { --c: var(--part); }
+  .ng { --c: var(--ng); }
+  #bar { grid-column: 1 / -1; display: flex; height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
+  #bar i { background: var(--c); transition: width .3s; }
+  @media (max-width: 34rem) {
+    header { grid-template-columns: 1fr; }
+    #stats { justify-content: space-between; }
+  }
+
+  main { display: flex; flex-direction: column; gap: 1.1rem; }
+  main > :empty { display: none; }
+  main p { margin: 0; }
+  #type { font-size: .8rem; color: var(--ink-soft); }
+  /* 復習モード中は指示文の頭に印を出す */
+  [data-mode="missed"] #type::before {
+    content: "復習";
+    margin-right: .5rem;
+    padding: .05rem .5rem;
+    border-radius: 999px;
+    background: var(--part);
+    color: var(--paper);
+    font-weight: 600;
+  }
+  #hint { font-size: 1.1rem; color: var(--ink-soft); }
+
+  /* 問題文。動詞の書き換えは A と B を同じ大きさで並べる */
+  #sentences { display: flex; flex-direction: column; gap: .5rem; font: 500 clamp(1.7rem, 6.5vw, 2.5rem)/1.6 var(--display); }
+  .line { display: flex; gap: .6em; align-items: baseline; margin: 0; }
+  .line > span { white-space: pre-line; }
+  .tag { font: 600 .5em var(--body); color: var(--ink-soft); }
+  .paren { color: var(--ink-soft); }
+
+  /* かっこの中に直接書く。幅は中身に合わせて伸びる (未対応のブラウザは固定幅) */
+  #answer {
+    field-sizing: content;
+    min-width: 3em;
+    margin: 0 .15em;
+    padding: 0 .15em;
+    font: inherit; /* 16px 未満だと iOS がズームする。文の大きさをそのまま使う */
+    color: var(--ink);
+    background: none;
+    border: 0;
+    border-bottom: 2px solid var(--rule);
+    border-radius: 0;
+    outline: none;
+  }
+  @supports not (field-sizing: content) { #answer { width: 6em; } }
+  #answer:focus { border-color: var(--focus); }
+  #answer::placeholder { color: var(--ink-soft); opacity: .55; }
+  [data-result="correct"] #answer { color: var(--ok); border-color: var(--ok); }
+  [data-result="partial"] #answer { color: var(--part); border-color: var(--part); }
+  [data-result="wrong"] #answer { color: var(--ng); border-color: var(--ng); text-decoration: line-through; }
+  #fix { color: var(--ok); }
+  #fix:not(:empty) { margin-right: .15em; }
+
+  #choices { display: flex; flex-wrap: wrap; gap: .5rem; }
+  #choices button {
+    font: 1.15rem var(--display);
+    color: inherit;
+    background: none;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: .25rem .95rem;
+    cursor: pointer;
+  }
+  #choices [aria-pressed="true"] { border-color: var(--focus); color: var(--focus); }
+  #choices .answer { border-color: var(--ok); color: var(--ok); }
+
+  #result { font-weight: 600; }
+  [data-result="correct"] #result { color: var(--ok); }
+  [data-result="partial"] #result { color: var(--part); }
+  [data-result="wrong"] #result { color: var(--ng); }
+  #ja, #note { color: var(--ink-soft); line-height: 1.7; }
+
+  #empty { width: 100%; max-width: 44rem; margin: 3rem auto 0; text-align: center; font-size: 1.2rem; }
+  #empty small { display: block; margin-top: .6rem; font-size: .8rem; color: var(--ink-soft); }
+
+  footer { margin-top: auto; display: flex; flex-wrap: wrap; gap: .5rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
+  footer button {
+    font: .85rem var(--body);
+    color: var(--ink);
+    background: none;
+    border: 1px solid var(--rule);
+    border-radius: .5rem;
+    padding: .45rem .9rem;
+    cursor: pointer;
+  }
+  footer button:disabled { opacity: .4; cursor: default; }
+  #reset { margin-left: auto; color: var(--ink-soft); }
+
+  /* アクサン入力の早見表。data-os に合わせて片方の section だけ見せる */
+  #keys {
+    width: min(34rem, calc(100% - 2rem));
+    max-height: calc(100dvh - 2rem);
+    padding: 0; /* 余白は .inner に持たせる。dialog 自身への click を「背景を押した」と見なすため */
+    border: 1px solid var(--rule);
+    border-radius: .75rem;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  #keys::backdrop { background: rgb(0 0 0 / .45); }
+  #keys .inner { padding: 1.25rem 1.25rem 1.5rem; display: flex; flex-direction: column; gap: .6rem; }
+  #keys[data-os="mac"] section[data-os="win"], #keys[data-os="win"] section[data-os="mac"] { display: none; }
+  #keys section { display: flex; flex-direction: column; gap: .5rem; }
+  .head { display: flex; align-items: center; gap: .75rem; }
+  .head h2 { font: 600 1.05rem var(--body); margin: 0 auto 0 0; }
+  .head form { margin: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: .5rem; overflow: hidden; }
+  .seg button { font: .85rem var(--body); padding: .3rem .8rem; background: none; color: var(--ink-soft); border: 0; cursor: pointer; }
+  .seg [aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .close { font: 1.3rem/1 var(--body); color: var(--ink-soft); background: none; border: 0; padding: .2rem .4rem; cursor: pointer; }
+  #keys h3 { font: 600 .9rem var(--body); margin: .6rem 0 0; }
+  #keys p { margin: 0; }
+  .sub { font-size: .8rem; line-height: 1.7; color: var(--ink-soft); }
+  .foot { margin-top: .6rem !important; padding-top: .8rem; border-top: 1px solid var(--rule); }
+  #keys table { border-collapse: collapse; align-self: start; }
+  #keys th { font: 500 1.2rem var(--display); text-align: left; padding: .2rem 1.25rem .2rem 0; white-space: nowrap; }
+  #keys td { font-size: .85rem; padding: .2rem 0; }
+  kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    margin: 0 .1rem;
+    padding: .05rem .35rem;
+    font: .8rem var(--body);
+    text-align: center;
+    border: 1px solid var(--rule);
+    border-bottom-width: 2px;
+    border-radius: .3rem;
+  }
+  .alt { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); gap: .3rem .75rem; font-size: .85rem; font-variant-numeric: tabular-nums; }
+  .alt b { font: 500 1.15rem var(--display); margin-right: .4rem; }
+</style>
+
+<header>
+  <h1>Petit Quiz Futsuken</h1>
+  <dl id="stats" aria-live="polite">
+    <div class="ok"><dt>正解</dt><dd id="n-correct">0</dd></div>
+    <div class="part"><dt>部分正解</dt><dd id="n-partial">0</dd></div>
+    <div class="ng"><dt>不正解</dt><dd id="n-wrong">0</dd></div>
+    <div class="total"><dt>全問</dt><dd id="n-total">0</dd></div>
+  </dl>
+  <div id="bar" aria-hidden="true"><i id="bar-correct" class="ok"></i><i id="bar-partial" class="part"></i><i id="bar-wrong" class="ng"></i></div>
+</header>
+<main>
+  <p id="type"></p>
+  <p id="hint"></p>
+  <div id="sentences" lang="fr">
+    <p id="a-line" class="line"><b class="tag">A</b><span id="a"></span></p>
+    <form id="form">
+      <p class="line"><b id="tag-b" class="tag">B</b><span><span id="before"></span><span class="paren">(</span><input id="answer" lang="fr" aria-label="答え" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span id="fix"></span><span class="paren">)</span><span id="after"></span></span></p>
+    </form>
+  </div>
+  <div id="choices" lang="fr"></div>
+  <p id="result" aria-live="polite"></p>
+  <p id="ja"></p>
+  <p id="note"></p>
+</main>
+<p id="empty" hidden>間違えた問題はありません。<small>「全問から出題する」で全問にもどれます。</small></p>
+<footer>
+  <button id="mode" type="button"></button>
+  <button id="open-keys" type="button">アクサンの入力方法</button>
+  <button id="reset" type="button">記録をリセット</button>
+</footer>
+
+<dialog id="keys" aria-labelledby="keys-title">
+  <div class="inner">
+    <div class="head">
+      <h2 id="keys-title">アクサンの入力方法</h2>
+      <div class="seg" role="group" aria-label="OS">
+        <button type="button" data-os="mac">Mac</button>
+        <button type="button" data-os="win">Windows</button>
+      </div>
+      <form method="dialog"><button class="close" aria-label="閉じる">×</button></form>
+    </div>
+
+    <section data-os="mac">
+      <h3>キーの長押し</h3>
+      <p class="sub">e や a を長押しすると候補が出ます。クリックするか、候補の下の数字キーで選んでください。</p>
+      <h3>⌥ (option) との組み合わせ</h3>
+      <p class="sub">入力ソースを「ABC」(または「U.S.」) にしておきます。⌥ と1つ目のキーを押して離し、続けて文字を打ちます。</p>
+      <table>
+        <tr><th>é</th><td><kbd>⌥</kbd><kbd>E</kbd> → <kbd>E</kbd></td></tr>
+        <tr><th>à è ù</th><td><kbd>⌥</kbd><kbd>`</kbd> → 文字</td></tr>
+        <tr><th>â ê î ô û</th><td><kbd>⌥</kbd><kbd>I</kbd> → 文字</td></tr>
+        <tr><th>ë ï ü</th><td><kbd>⌥</kbd><kbd>U</kbd> → 文字</td></tr>
+        <tr><th>ç</th><td><kbd>⌥</kbd><kbd>C</kbd></td></tr>
+        <tr><th>œ</th><td><kbd>⌥</kbd><kbd>Q</kbd></td></tr>
+      </table>
+      <p class="sub">大文字は最後のキーに ⇧ を足します (É は ⌥E → ⇧E、Ç は ⌥⇧C)。</p>
+    </section>
+
+    <section data-os="win">
+      <h3>キーボード「米国 - インターナショナル」</h3>
+      <p class="sub">設定 → 時刻と言語 → 言語と地域で英語 (米国) を追加し、そのキーボードに United States-International を追加します。記号を押してから文字を打ちます。</p>
+      <table>
+        <tr><th>é</th><td><kbd>'</kbd> → <kbd>E</kbd></td></tr>
+        <tr><th>à è ù</th><td><kbd>`</kbd> → 文字</td></tr>
+        <tr><th>â ê î ô û</th><td><kbd>⇧</kbd><kbd>6</kbd> (^) → 文字</td></tr>
+        <tr><th>ë ï ü</th><td><kbd>⇧</kbd><kbd>'</kbd> (") → 文字</td></tr>
+        <tr><th>ç</th><td><kbd>'</kbd> → <kbd>C</kbd></td></tr>
+      </table>
+      <p class="sub">アポストロフ(') そのものを入力する場合は、 ' → スペースを押してください。l'ami のつもりで ' → a と続けると á になるので注意してください。</p>
+      <h3>Alt コード (テンキー)</h3>
+      <p class="sub">Alt を押したまま、テンキーで数字を打ちます。</p>
+      <ul class="alt">
+        <li><b>é</b> 0233</li><li><b>è</b> 0232</li><li><b>ê</b> 0234</li><li><b>ë</b> 0235</li>
+        <li><b>à</b> 0224</li><li><b>â</b> 0226</li><li><b>ç</b> 0231</li><li><b>î</b> 0238</li>
+        <li><b>ï</b> 0239</li><li><b>ô</b> 0244</li><li><b>ù</b> 0249</li><li><b>û</b> 0251</li>
+        <li><b>ü</b> 0252</li><li><b>œ</b> 0156</li>
+      </ul>
+    </section>
+
+    <p class="sub foot">iPhone・Android はキーを長押しすると候補が出ます。</p>
+  </div>
+</dialog>
+<script type="module" src="app.js"></script>

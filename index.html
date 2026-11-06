@@ -34,7 +34,7 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --paper: #11131C;
-      --ink: #E9EAF3;
+      --ink: #D6D8E4;
       --ink-soft: #9098B4;
       --rule: #34364A;
       --ok: #55C296;
@@ -42,6 +42,9 @@
       --ng: #F07C72;
       --focus: #8FA3FF;
     }
+    /* 暗い背景だと明るい文字がにじみ (ハレーション)、Bodoni の極細線が消える。
+       大きい字ほど opsz が上がって線が細くなるので、本文用 (11) に固定して線を太らせる。まだ細ければ 6 まで下げられる */
+    body { font-variation-settings: "opsz" 11; }
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }

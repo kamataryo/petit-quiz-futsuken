@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- ogp.png の元。README の「OGP 画像とアイコン」のコマンドで 1200×630 にスクショする -->
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600&family=Bodoni+Moda:ital,opsz,wght@0,6..96,500;1,6..96,500&family=Zen+Kaku+Gothic+New:wght@500&display=block">
+<style>
+  body { margin: 0; }
+  .d { font-family: "Bodoni Moda", serif; font-weight: 500; }
+  .j { font-family: "Zen Kaku Gothic New", sans-serif; font-weight: 500; }
+  .t { font-family: "Archivo", sans-serif; font-weight: 600; }
+</style>
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#FCFCFA"/>
+
+  <text x="80" y="120" class="j" font-size="30" fill="#616A88">仏検の筆記問題1問1答</text>
+
+  <!-- アプリの書き換え問題と同じ並び。B の答えは正解の色 -->
+  <g font-size="64" fill="#1A2440">
+    <text x="80" y="262" class="d"><tspan class="t" font-size="32" fill="#616A88">A</tspan><tspan dx="30">Elle s'est mise à pleurer.</tspan></text>
+    <text x="80" y="372" class="d"><tspan class="t" font-size="32" fill="#616A88">B</tspan><tspan dx="30">Elle </tspan><tspan fill="#616A88">(</tspan><tspan dx="10" fill="#1E7A5B">a commencé</tspan><tspan dx="10" fill="#616A88">)</tspan><tspan> à pleurer.</tspan></text>
+  </g>
+  <rect x="292" y="386" width="376" height="4" fill="#1E7A5B"/>
+
+  <text x="80" y="530" class="d" font-style="italic" font-size="68" fill="#1A2440">Petit Quiz Futsuken</text>
+
+  <!-- 成績の帯 (正解 / 部分正解 / 不正解) -->
+  <rect x="0" y="606" width="720" height="24" fill="#1E7A5B"/>
+  <rect x="720" y="606" width="300" height="24" fill="#A86A00"/>
+  <rect x="1020" y="606" width="180" height="24" fill="#C4453C"/>
+</svg>

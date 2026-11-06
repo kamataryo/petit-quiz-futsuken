@@ -77,3 +77,12 @@ localStorage の `petit-quiz-futsuken` に、問題ごとの最後の結果 (`id
 `levels` に `"2": "2級"` を足し、`"level": "2"` の問題を足す。新しい形式なら `types` も足す。
 級は `?level=2` で選ぶ (画面での切り替えはまだない。ないときは `levels` の先頭)。
 どの級にも問題があること、`id` が重ならないこと、語群を埋めるだけの語があることはテストが見ている。
+
+## OGP 画像とアイコン
+
+`assets/ogp.html` (1200×630) と `assets/icon.html` (512×512) が元で、Chrome のスクショで png にする。
+`index.html` の `og:url` / `og:image` は GitHub Pages の URL を絶対パスで書いている。
+
+```sh
+pushd assets && for f in ogp:1200,630 icon:512,512; do n=${f%%:*}; "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --hide-scrollbars --force-device-scale-factor=1 --virtual-time-budget=5000 --window-size=${f#*:} --screenshot="$PWD/$n.png" "file://$PWD/$n.html"; done; popd
+```

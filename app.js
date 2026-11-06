@@ -65,12 +65,13 @@ function next() {
   input.focus();
 }
 
-// 変形が要る形式 (inflect) は placeholder に薄く入れるだけで、書くのは自分。選ぶだけの形式は答えを埋める
+// 形を変えて書く問題 (cue があるもの: 動詞の活用、à → au など) は placeholder に薄く入れるだけで、書くのは自分。
+// 語群の語をそのまま書く問題は答えを埋める
 $("choices").onclick = (e) => {
   const b = e.target.closest("button");
   if (!b || input.readOnly) return;
   for (const x of $("choices").children) x.ariaPressed = String(x === b);
-  if (types[q.type].inflect) input.placeholder = b.textContent;
+  if (q.cue) input.placeholder = b.textContent;
   else input.value = b.textContent;
   input.focus();
 };

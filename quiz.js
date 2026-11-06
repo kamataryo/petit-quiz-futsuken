@@ -10,9 +10,12 @@ export const shuffle = (a) => {
 // 語群に並べる形。verb は不定詞 (cue)、ほかは先頭の正解
 export const choiceOf = (q) => (q.cue ?? q.answers[0]).toLowerCase();
 
-// 語群は正解1つと、同じ級・同じ形式のほかの問題から引いた n-1 語。この問題で正解になる語は混ぜない
+// 空欄が文頭か (対話の「— 」のあとも文頭)。文頭なら答えは大文字で始まる
+export const atHead = (text) => /(^|[.!?]\s|—\s)$/.test(text.split("___")[0]);
+
+// 語群は正解1つと、同じ級・同じ形式のほかの問題から引いた n-1 語。この問題で正解になる語と avoid の語は混ぜない
 export function choices(q, questions, n) {
-  const own = new Set([choiceOf(q), ...q.answers.map((a) => a.toLowerCase())]);
+  const own = new Set([choiceOf(q), ...q.answers.map((a) => a.toLowerCase()), ...(q.avoid ?? [])]);
   const pool = new Set(questions.filter((x) => x.level === q.level && x.type === q.type).map(choiceOf));
   return shuffle([choiceOf(q), ...shuffle([...pool].filter((w) => !own.has(w))).slice(0, n - 1)]);
 }

@@ -1,4 +1,4 @@
-import { choiceOf, choices, grade, instantiate, shuffle } from "./quiz.js";
+import { atHead, choiceOf, choices, grade, instantiate, shuffle } from "./quiz.js";
 
 const { levels, types, pools, questions } = await fetch("./questions.json").then((r) => r.json());
 const $ = (id) => document.getElementById(id);
@@ -21,6 +21,7 @@ const isMissed = (x) => ![undefined, "correct"].includes(state.results[x.id]);
 
 let deck = [];
 let q;
+let shown = 0; // 問題を出した時刻
 
 function render() {
   const n = { correct: 0, partial: 0, wrong: 0 };
@@ -46,7 +47,9 @@ function next() {
   $("empty").hidden = !none;
   render();
   if (none) return;
-  if (!deck.length) deck = shuffle(state.mode === "missed" ? pool.filter(isMissed) : pool);
+  // 山札は後ろから配るので、まだ答えていない問題を後ろに寄せる。リロードで切り直しても未回答から出る
+  if (!deck.length) deck = shuffle(state.mode === "missed" ? pool.filter(isMissed) : pool)
+    .sort((a, b) => (b.id in state.results) - (a.id in state.results));
   q = instantiate(deck.pop(), pools); // 人名や数をここで埋める。id はそのまま
   const { label, choices: n } = types[q.type];
   delete main.dataset.result;
@@ -57,12 +60,15 @@ function next() {
   // 入力欄は DOM から外さずに前後の文だけ差し替える。外すとスマホのキーボードが閉じる
   [$("before").textContent, $("after").textContent] = q.text.split("___");
   $("fix").textContent = $("result").textContent = $("ja").textContent = $("note").textContent = "";
+  // 文頭の空欄では語群も大文字で始める。押して入れた語が大文字・小文字違いにならないように
+  const head = atHead(q.text);
   $("choices").replaceChildren(...(n ? choices(q, questions, n) : []).map((w) =>
-    Object.assign(document.createElement("button"), { type: "button", textContent: w })));
+    Object.assign(document.createElement("button"), { type: "button", textContent: head ? w[0].toUpperCase() + w.slice(1) : w })));
   input.value = "";
   input.placeholder = n ? "" : q.cue ?? "";
   input.readOnly = false;
   input.focus();
+  shown = Date.now();
 }
 
 // 形を変えて書く問題 (cue があるもの: 動詞の活用、à → au など) は placeholder に薄く入れるだけで、書くのは自分。
@@ -80,6 +86,8 @@ $("choices").onclick = (e) => {
 $("form").onsubmit = (e) => {
   e.preventDefault();
   if (input.readOnly) return next();
+  // Enter の押しすぎで次の問題まで無回答にしない。出してすぐ (1秒以内) の空欄の Enter は受け付けない
+  if (!input.value.trim() && Date.now() - shown < 1000) return;
   const r = grade(input.value, q.answers);
   state.results[q.id] = r;
   save();
@@ -91,7 +99,7 @@ $("form").onsubmit = (e) => {
   $("result").textContent = r === "correct" ? "◎ 正解" : `${MARK[bucket(r)]} ${why} — ${q.answers.join(" / ")}`;
   $("ja").textContent = q.ja ?? "";
   $("note").textContent = q.note ?? "";
-  for (const b of $("choices").children) b.classList.toggle("answer", b.textContent === choiceOf(q));
+  for (const b of $("choices").children) b.classList.toggle("answer", b.textContent.toLowerCase() === choiceOf(q));
   render();
 };
 
@@ -120,7 +128,7 @@ $("mode").onclick = () => {
 };
 
 $("reset").onclick = () => {
-  if (!confirm("正解・不正解の記録をすべて消します。よろしいですか？")) return;
+  if (!confirm("正解・不正解の記録をすべて消します。よろしいですか？")) return input.focus();
   state.results = {};
   deck = [];
   save();

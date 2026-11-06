@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { choiceOf, choices, grade, instantiate } from "./quiz.js";
+import { atHead, choiceOf, choices, grade, instantiate } from "./quiz.js";
 
 test("アクサンまで合えば正解、アクサンだけ違えば部分正解", () => {
   assert.equal(grade("à", ["à"]), "correct");
@@ -63,6 +63,12 @@ test("語群は数がそろい、正解になる語は1つだけ", () => {
   }
 });
 
+test("avoid の語は語群に出さない", () => {
+  const q = { level: "x", type: "verb", cue: "rater", answers: ["a raté"], avoid: ["manquer"] };
+  const qs = [q, { ...q, cue: "manquer", avoid: [] }, { ...q, cue: "partir", avoid: [] }];
+  for (let i = 0; i < 20; i++) assert.deepEqual(choices(q, qs, 2).sort(), ["partir", "rater"]);
+});
+
 test("vars は範囲の端まで出て、同じ pool からは重ならずに選ぶ", () => {
   const q = { id: "x", vars: { n: [5, 40, 5], a: "p", b: "p" }, text: "{n} {a} {b}", ja: "{a}" };
   const pools = { p: [{ fr: "Paul", ja: "ポール" }, { fr: "Marc", ja: "マルク" }] };
@@ -88,7 +94,6 @@ test("シードの {名前} はすべて vars で埋まり、埋めても同じ�
 
 test("文頭の空欄の答えは大文字で、それ以外は小文字で始まる", () => {
   for (const q of questions) {
-    const head = /(^|[.!?]\s|—\s)$/.test(q.text.split("___")[0]);
-    for (const a of q.answers) assert.equal(a[0] === a[0].toUpperCase(), head, `${q.id} ${a}`);
+    for (const a of q.answers) assert.equal(a[0] === a[0].toUpperCase(), atHead(q.text), `${q.id} ${a}`);
   }
 });

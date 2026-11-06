@@ -95,7 +95,7 @@
   /* 問題文。動詞の書き換えは A と B を同じ大きさで並べる */
   #sentences { display: flex; flex-direction: column; gap: .5rem; font: 500 clamp(1.7rem, 6.5vw, 2.5rem)/1.6 var(--display); }
   .line { display: flex; gap: .6em; align-items: baseline; margin: 0; }
-  .line > span { white-space: pre-line; }
+  .line > span { white-space: pre-line; min-width: 0; }
   .tag { font: 600 .5em var(--body); color: var(--ink-soft); }
   .paren { color: var(--ink-soft); }
 
@@ -103,6 +103,7 @@
   #answer {
     field-sizing: content;
     min-width: 3em;
+    max-width: calc(100% - .3em); /* 長く打っても行からはみ出さず、欄の中で流れる。.3em は左右の margin */
     margin: 0 .15em;
     padding: 0 .15em;
     font: inherit; /* 16px 未満だと iOS がズームする。文の大きさをそのまま使う */

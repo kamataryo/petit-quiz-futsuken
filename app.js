@@ -120,7 +120,14 @@ $("open-keys").onclick = () => $("keys").showModal();
 $("keys").onclick = (e) => e.target === $("keys") && $("keys").close(); // 枠の外 (背景) を押したら閉じる
 $("keys").onclose = () => input.focus();
 
-$("next").onclick = () => next(); // タップの中で focus するので、スマホのキーボードもまた開く
+// 回答する・次にすすむはどちらもフォームの送信ボタン。onsubmit が採点か次へかを決める (next() はタップの中で focus するので、キーボードもまた開く)
+// 押してもフォーカスを入力欄から動かさず、キーボードを閉じない
+$("actions").onmousedown = (e) => e.preventDefault();
+// iOS はキーボードが出ても画面 (layout viewport) が縮まず、下端に固定したボタンが隠れる。見えている範囲の下端まで持ち上げる
+const vv = visualViewport;
+const lift = () => { $("actions").style.transform = `translateY(${Math.min(0, vv.offsetTop + vv.height - innerHeight)}px)`; };
+vv.addEventListener("resize", lift);
+vv.addEventListener("scroll", lift);
 
 $("mode").onclick = () => {
   state.mode = state.mode === "missed" ? "all" : "missed";

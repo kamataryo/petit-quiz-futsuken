@@ -42,9 +42,9 @@
       --ng: #F07C72;
       --focus: #8FA3FF;
     }
-    /* 暗い背景だと明るい文字がにじみ (ハレーション)、Bodoni の極細線が消える。
-       大きい字ほど opsz が上がって線が細くなるので、本文用 (11) に固定して線を太らせる。まだ細ければ 6 まで下げられる */
-    body { font-variation-settings: "opsz" 11; }
+    /* 暗い背景だと明るい文字がにじみ (ハレーション)、Bodoni の極細線は opsz を下げても読みにくい。
+       暗いときだけ線の太さが均一なセリフにする。Apple は New York、ほかは Georgia */
+    :root { --display: ui-serif, Georgia, "Hiragino Mincho ProN", serif; }
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -55,7 +55,7 @@
   body {
     margin: 0;
     min-height: 100dvh;
-    padding: 1rem;
+    padding: 1rem 1rem 5rem; /* 下は #actions に隠れない分 */
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -175,9 +175,12 @@
   }
   footer button:disabled { opacity: .4; cursor: default; }
   #reset { margin-left: auto; color: var(--ink-soft); }
-  /* 答え合わせのあとだけ出す。キーボードを閉じると Enter が押せないので、その代わり */
-  #next { flex-basis: 100%; padding-block: .7rem; font-size: 1rem; font-weight: 600; color: var(--paper); background: var(--ink); border-color: var(--ink); }
-  main:not([data-result]) ~ footer #next { display: none; }
+
+  /* Enter の代わりのボタン。画面の下端に固定し、キーボードが出たら app.js でその上まで持ち上げる。
+     答え合わせの前は「回答する」、あとは「次にすすむ」だけを出す */
+  #actions { position: fixed; left: 0; right: 0; bottom: 0; padding: .6rem 1rem; background: var(--paper); border-top: 1px solid var(--rule); }
+  #actions button { display: block; width: 100%; max-width: 44rem; margin: 0 auto; padding: .7rem; font: 600 1rem var(--body); color: var(--paper); background: var(--ink); border: 0; border-radius: .5rem; cursor: pointer; }
+  main[data-result] ~ #actions #submit, main:not([data-result]) ~ #actions #next, main[hidden] ~ #actions { display: none; }
 
   /* アクサン入力の早見表。data-os に合わせて片方の section だけ見せる */
   #keys {
@@ -247,8 +250,11 @@
   <p id="note"></p>
 </main>
 <p id="empty" hidden>間違えた問題はありません。<small>「全問から出題する」で全問にもどれます。</small></p>
+<div id="actions">
+  <button id="submit" form="form">回答する</button>
+  <button id="next" form="form">次にすすむ</button>
+</div>
 <footer>
-  <button id="next" type="button">次にすすむ</button>
   <button id="mode" type="button"></button>
   <button id="open-keys" type="button">アクサンの入力方法</button>
   <button id="reset" type="button">記録をリセット</button>

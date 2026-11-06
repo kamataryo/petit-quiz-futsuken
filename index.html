@@ -94,7 +94,8 @@
     #stats { justify-content: space-between; }
   }
 
-  main { display: flex; flex-direction: column; gap: 1.1rem; }
+  /* タップでキーボードを出すために click を拾っているので、iOS が main 全体を灰色に光らせないようにする */
+  main { display: flex; flex-direction: column; gap: 1.1rem; -webkit-tap-highlight-color: transparent; }
   main > :empty { display: none; }
   main p { margin: 0; }
   #type { font-size: 1rem; line-height: 1.6; color: var(--ink-soft); }
@@ -181,6 +182,8 @@
   #actions { position: fixed; left: 0; right: 0; bottom: 0; padding: .6rem 1rem; background: var(--paper); border-top: 1px solid var(--rule); }
   #actions button { display: block; width: 100%; max-width: 44rem; margin: 0 auto; padding: .7rem; font: 600 1rem var(--body); color: var(--paper); background: var(--ink); border: 0; border-radius: .5rem; cursor: pointer; }
   main[data-result] ~ #actions #submit, main:not([data-result]) ~ #actions #next, main[hidden] ~ #actions { display: none; }
+  /* 押せないときはタップを下の #actions に通す。そこで mousedown を止めているので、入力欄からフォーカスが外れずキーボードも閉じない */
+  #actions button:disabled { opacity: .4; cursor: default; pointer-events: none; }
 
   /* アクサン入力の早見表。data-os に合わせて片方の section だけ見せる */
   #keys {

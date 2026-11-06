@@ -28,7 +28,10 @@ const isMissed = (x) => ![undefined, "correct"].includes(state.results[x.id]);
 
 let deck = [];
 let q;
-let shown = 0; // 問題を出した時刻
+
+// 回答するは1文字入るまで押せない。既定の送信ボタンが disabled だと Enter でもフォームは送られないので、空のまま採点されることはない
+const sync = () => { $("submit").disabled = !input.value.trim(); };
+input.addEventListener("input", sync);
 
 function render() {
   const n = { correct: 0, partial: 0, wrong: 0 };
@@ -74,10 +77,10 @@ function next() {
   $("choices").replaceChildren(...(n ? choices(q, questions, n) : []).map((w) =>
     Object.assign(document.createElement("button"), { type: "button", textContent: head ? w[0].toUpperCase() + w.slice(1) : w })));
   input.value = "";
+  sync();
   input.placeholder = n ? "" : q.cue ?? "";
   input.readOnly = false;
   focus();
-  shown = Date.now();
   // 問題が変わったのがわかるように、ふわっと出す
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
     main.animate([{ opacity: 0, transform: "translateY(.6rem)" }, {}], { duration: 400, easing: "ease-out" });
@@ -96,15 +99,20 @@ $("choices").onclick = (e) => {
   for (const x of $("choices").children) x.ariaPressed = String(x === b);
   if (q.cue) input.placeholder = b.textContent;
   else input.value = b.textContent;
+  sync();
   focus();
 };
 
-// Enter 1回目で採点 (空なら無回答で ×)、2回目で次へ
+// スマホでブラウザを開き直すと、入力欄にフォーカスはあるのにキーボードが出ていないことがある。キーボードはタップの中でしか開けないので、
+// 答える前なら問題のあたりのどこをタップしても入力欄に付け直す。PC ではクリックで文字を選べなくなるので、指で触る画面だけ
+main.addEventListener("click", (e) => {
+  if (matchMedia("(pointer: coarse)").matches && !input.readOnly && !e.target.closest("button, input")) focus();
+});
+
+// Enter 1回目で採点、2回目で次へ
 $("form").onsubmit = (e) => {
   e.preventDefault();
   if (input.readOnly) return next();
-  // Enter の押しすぎで次の問題まで無回答にしない。出してすぐ (1秒以内) の空欄の Enter は受け付けない
-  if (!input.value.trim() && Date.now() - shown < 1000) return;
   const r = grade(input.value, q.answers);
   state.results[q.id] = r;
   save();
@@ -112,7 +120,7 @@ $("form").onsubmit = (e) => {
   input.readOnly = true; // disabled だとフォーカスが外れてスマホのキーボードが閉じる
   input.placeholder = "";
   if (r !== "correct") $("fix").textContent = q.answers[0];
-  const why = { case: "大文字・小文字違い", accent: "アクサン違い", wrong: input.value.trim() ? "不正解" : "無回答" }[r];
+  const why = { case: "大文字・小文字違い", accent: "アクサン違い", wrong: "不正解" }[r];
   $("result").textContent = r === "correct" ? "◎ 正解" : `${MARK[bucket(r)]} ${why} — ${q.answers.join(" / ")}`;
   $("ja").textContent = q.ja ?? "";
   $("note").textContent = q.note ?? "";

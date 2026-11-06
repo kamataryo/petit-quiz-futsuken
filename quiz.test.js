@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { atHead, choiceOf, choices, grade, instantiate } from "./quiz.js";
+import { atHead, choiceOf, choices, grade, instantiate, variants } from "./quiz.js";
 
 test("アクサンまで合えば正解、アクサンだけ違えば部分正解", () => {
   assert.equal(grade("à", ["à"]), "correct");
@@ -31,9 +31,10 @@ test("表記ゆれは正解のまま", () => {
 const { levels, types, pools, questions } = JSON.parse(
   readFileSync(new URL("./questions.json", import.meta.url), "utf8"),
 );
+const forms = questions.flatMap(variants); // alts も1問ずつ見る
 
 test("シードの問題が出題できる形になっている", () => {
-  for (const q of questions) {
+  for (const q of forms) {
     assert.ok(levels[q.level] && types[q.type], q.text);
     assert.equal(q.text.split("___").length, 2, q.text);
     assert.ok(q.answers.length && (q.hint || q.ja || q.a), q.text);
@@ -52,7 +53,7 @@ test("id は記録のキーなので重複しない", () => {
 });
 
 test("語群は数がそろい、正解になる語は1つだけ", () => {
-  for (const q of questions) {
+  for (const q of forms) {
     const n = types[q.type].choices;
     if (!n) continue;
     const c = choices(q, questions, n);
@@ -78,22 +79,37 @@ test("vars は範囲の端まで出て、同じ pool からは重ならずに選
   assert.equal(instantiate(q, pools).id, "x");
 });
 
+test("alts は元の形とあわせて1つ選び、vars は元のものに足す。{名前.欄} でほかの欄も引ける", () => {
+  const q = { id: "x", vars: { s: [{ fr: "Il", ja: "彼", v: "来た" }] }, text: "{s} ___", ja: "{s}は{s.v}", answers: ["a"],
+    alts: [{ vars: { n: [3, 3] }, text: "{s} {n} ___", answers: ["b"] }] };
+  const [a, b] = [0, 0.999].map((r) => instantiate(q, {}, () => r));
+  assert.deepEqual([a.text, a.ja, a.answers], ["Il ___", "彼は来た", ["a"]]);
+  assert.deepEqual([b.text, b.answers, b.id], ["Il 3 ___", ["b"], "x"]);
+});
+
 test("シードの {名前} はすべて vars で埋まり、埋めても同じ問題のまま", () => {
-  for (const q of questions) {
-    const used = [q.text, q.a, q.hint, q.ja].join(" ").match(/\{\w+\}/g) ?? [];
-    for (const k of used) assert.ok(q.vars?.[k.slice(1, -1)], `${q.id} ${k}`);
-    for (const spec of Object.values(q.vars ?? {})) assert.ok(Array.isArray(spec) || pools[spec], q.id);
+  for (const q of forms) {
+    const used = [q.text, q.a, q.hint, q.ja].join(" ").match(/(?<=\{)\w+/g) ?? [];
+    for (const k of used) assert.ok(q.vars?.[k], `${q.id} ${k}`);
+    for (const spec of Object.values(q.vars ?? {})) assert.ok(typeof spec !== "string" || pools[spec], q.id);
     assert.ok(!q.answers.join().includes("{"), q.id); // 語群はほかの問題の answers から作るので、答えには入れない
     for (let i = 0; i < 20; i++) {
       const x = instantiate(q, pools);
       assert.equal(x.id, q.id);
-      assert.ok(![x.text, x.a, x.hint, x.ja].join(" ").includes("{"), q.id);
+      // 欄の書き忘れは undefined、{名前.欄} の欄がない要素は [object Object] になって出る
+      assert.ok(!/[{}]|undefined|\[object/.test([x.text, x.a, x.hint, x.ja].join(" ")), `${q.id} ${x.text}`);
     }
   }
 });
 
-test("文頭の空欄の答えは大文字で、それ以外は小文字で始まる", () => {
+test("alts で文を変えたら、訳も書き直す", () => {
   for (const q of questions) {
+    for (const alt of q.alts ?? []) if (alt.text) for (const k of ["hint", "ja"]) if (q[k]) assert.ok(alt[k], `${q.id} ${alt.text}`);
+  }
+});
+
+test("文頭の空欄の答えは大文字で、それ以外は小文字で始まる", () => {
+  for (const q of forms) {
     for (const a of q.answers) assert.equal(a[0] === a[0].toUpperCase(), atHead(q.text), `${q.id} ${a}`);
   }
 });

@@ -13,30 +13,33 @@ export const choiceOf = (q) => (q.cue ?? q.answers[0]).toLowerCase();
 // 空欄が文頭か (対話の「— 」のあとも文頭)。文頭なら答えは大文字で始まる
 export const atHead = (text) => /(^|[.!?]\s|—\s)$/.test(text.split("___")[0]);
 
-// 語群は正解1つと、同じ級・同じ形式のほかの問題から引いた n-1 語。この問題で正解になる語と avoid の語は混ぜない
+// alts は同じ問題の別の形 (主語の性数や名詞の性を変えて、答えも変わるもの)。元の形とあわせて返す。vars は元のものに足す
+export const variants = ({ alts = [], ...q }) => [q, ...alts.map((a) => ({ ...q, ...a, vars: { ...q.vars, ...a.vars } }))];
+
+// 語群は正解1つと、同じ級・同じ形式のほかの問題 (alts の形も含む) から引いた n-1 語。この問題で正解になる語と avoid の語は混ぜない
 export function choices(q, questions, n) {
   const own = new Set([choiceOf(q), ...q.answers.map((a) => a.toLowerCase()), ...(q.avoid ?? [])]);
-  const pool = new Set(questions.filter((x) => x.level === q.level && x.type === q.type).map(choiceOf));
+  const pool = new Set(questions.flatMap(variants).filter((x) => x.level === q.level && x.type === q.type).map(choiceOf));
   return shuffle([choiceOf(q), ...shuffle([...pool].filter((w) => !own.has(w))).slice(0, n - 1)]);
 }
 
-// 問題文の {名前} を vars に従って埋めた問題を返す。覚えてしまわないように、出すたびに変える。
-// vars の値が pool 名なら pools から1つ (同じ問題の中では重ならない)、[min, max, step] ならその範囲の数。
-// pool の要素が { fr, ja } なら、日本語の欄 (hint, ja) には ja を使う。id は変えないので同じ問題として記録される
+// 元の形と alts から1つ選び、問題文の {名前} を vars に従って埋めた問題を返す。覚えてしまわないように、出すたびに変える。
+// vars の値が pool 名なら pools から、ほかの一覧ならその中から1つ (同じ問題の中では重ならない)、[min, max, step] (数) ならその範囲の数。
+// 要素が { fr, ja } なら、日本語の欄 (hint, ja) には ja を使う。{名前.欄} でほかの欄も引ける。id は変えないので同じ問題として記録される
 export function instantiate(q, pools, rand = Math.random) {
-  if (!q.vars) return q;
+  const pick = (a) => a[Math.floor(rand() * a.length)];
+  q = pick(variants(q));
   const v = {};
   const used = new Set();
-  for (const [k, spec] of Object.entries(q.vars)) {
-    if (Array.isArray(spec)) {
+  for (const [k, spec] of Object.entries(q.vars ?? {})) {
+    if (typeof spec[0] === "number") {
       const [min, max, step = 1] = spec;
       v[k] = min + step * Math.floor(rand() * (Math.floor((max - min) / step) + 1));
     } else {
-      const left = pools[spec].filter((x) => !used.has(x));
-      used.add((v[k] = left[Math.floor(rand() * left.length)]));
+      used.add((v[k] = pick((typeof spec === "string" ? pools[spec] : spec).filter((x) => !used.has(x)))));
     }
   }
-  const sub = (s, lang) => s?.replace(/\{(\w+)\}/g, (_, k) => v[k][lang] ?? v[k]);
+  const sub = (s, lang) => s?.replace(/\{(\w+)(?:\.(\w+))?\}/g, (_, k, f) => (f ? v[k][f] : v[k][lang] ?? v[k]));
   return { ...q, text: sub(q.text, "fr"), a: sub(q.a, "fr"), hint: sub(q.hint, "ja"), ja: sub(q.ja, "ja") };
 }
 

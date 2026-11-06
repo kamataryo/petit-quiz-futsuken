@@ -45,8 +45,10 @@
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
-  /* 寸法はすべて rem/em なので、根元を上げればスマホでまとめて大きくなる。もっと大きくしたいときは % を上げる */
-  @media (max-width: 34rem) { html { font-size: 125%; } }
+  /* 寸法はすべて rem/em なので、根元を上げればスマホでまとめて大きくなる。
+     画面幅に比例させ、幅 430px (iPhone Pro Max) で 25px (= 125% を Safari で 2 段拡大した大きさ)。小さい画面でも 125% は下回らない。
+     もっと大きくしたいときは vw と上限の % を上げる */
+  @media (max-width: 34rem) { html { font-size: clamp(125%, 5.8vw, 156.25%); } }
   body {
     margin: 0;
     min-height: 100dvh;

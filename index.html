@@ -160,8 +160,8 @@
   [data-result="wrong"] #result { color: var(--ng); }
   #ja, #note { color: var(--ink-soft); line-height: 1.7; }
 
-  #empty { width: 100%; max-width: 44rem; margin: 3rem auto 0; text-align: center; font-size: 1.2rem; }
-  #empty small { display: block; margin-top: .6rem; font-size: .8rem; color: var(--ink-soft); }
+  #empty, #done { width: 100%; max-width: 44rem; margin: 3rem auto 0; text-align: center; font-size: 1.2rem; }
+  #empty small, #done small { display: block; margin-top: .6rem; font-size: .8rem; color: var(--ink-soft); }
 
   footer { margin-top: auto; display: flex; flex-wrap: wrap; gap: .5rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
   footer button {
@@ -250,6 +250,7 @@
   <p id="note"></p>
 </main>
 <p id="empty" hidden>間違えた問題はありません。<small>「全問から出題する」で全問にもどれます。</small></p>
+<p id="done" hidden>全問解き終わりました。<small>「間違えた問題だけ解く」で復習するか、「記録をリセット」で最初から解き直せます。</small></p>
 <div id="actions">
   <button id="submit" form="form">回答する</button>
   <button id="next" form="form">次にすすむ</button>

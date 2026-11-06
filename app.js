@@ -39,18 +39,20 @@ function render() {
   document.body.dataset.mode = state.mode;
 }
 
-// ponytail: 山札を切って配り、尽きたら切り直すだけ
+// 全問モードの問題ストックは「まだ記録のない問題」。記録は localStorage にあるので、閉じても続きから出る。
+// 尽きたら「記録をリセット」を押すまで出さない。復習モードは間違えた問題がなくなるまで切り直して出す
+const isLeft = (x) => (state.mode === "missed" ? isMissed(x) : !(x.id in state.results));
+
 function next() {
   delete main.dataset.result;
-  // 復習モードで間違えた問題がなくなっても、モードは下のボタンで戻すまで変えない
-  const none = state.mode === "missed" && !pool.some(isMissed);
+  // 出す問題がなくなっても、モードは下のボタンで戻すまで変えない
+  const none = !pool.some(isLeft);
   main.hidden = none;
-  $("empty").hidden = !none;
+  $("empty").hidden = !none || state.mode !== "missed";
+  $("done").hidden = !none || state.mode !== "all";
   render();
   if (none) return;
-  // 山札は後ろから配るので、まだ答えていない問題を後ろに寄せる。リロードで切り直しても未回答から出る
-  if (!deck.length) deck = shuffle(state.mode === "missed" ? pool.filter(isMissed) : pool)
-    .sort((a, b) => (b.id in state.results) - (a.id in state.results));
+  if (!deck.length) deck = shuffle(pool.filter(isLeft));
   q = instantiate(deck.pop(), pools); // 人名や数をここで埋める。id はそのまま
   const { label, choices: n } = types[q.type];
   $("type").textContent = label;
@@ -137,8 +139,9 @@ $("mode").onclick = () => {
 };
 
 $("reset").onclick = () => {
-  if (!confirm("正解・不正解の記録をすべて消します。よろしいですか？")) return input.focus();
+  if (!confirm("正解・不正解の記録をすべて消して、全問を最初から出題します。よろしいですか？")) return input.focus();
   state.results = {};
+  state.mode = "all"; // 記録を消すと復習する問題はないので、全問にもどす
   deck = [];
   save();
   next();

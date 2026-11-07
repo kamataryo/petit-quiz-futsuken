@@ -128,6 +128,8 @@ test("長文は空欄が5つで、それぞれ別々の候補が3つ (先頭が�
       const head = /(^|\n|[.!?]\s|\} : )$/.test(parts[i]);
       for (const w of b) assert.equal(w[0] === w[0].toUpperCase(), head, `${q.id} ${w}`);
     });
+    // 会話は行ごとに話し手と台詞の2列に分けて出す
+    if (q.type === "dialog") for (const l of q.text.split("\n")) assert.match(l, /^\{\w+\} : /, q.id);
   }
 });
 

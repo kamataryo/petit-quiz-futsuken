@@ -93,27 +93,44 @@ function next() {
   input.value = "";
   input.placeholder = n ? "" : q.cue ?? "";
   input.readOnly = false;
-  // 長文は空欄ごとに入力欄を置く。候補はフォーカスした空欄のものを下のボタンの上に出す (showOpts)。
+  // 長文は空欄ごとに入力欄を置く。候補はフォーカスした空欄の下に出す (下の focusin)。
   // 前に正解した空欄は答えを埋めて閉じておく (復習モードで、間違えた空欄だけ解き直す)
   $("b-line").hidden = !!q.blanks;
   $("passage").hidden = !q.blanks;
   $("opts").replaceChildren();
   if (q.blanks) {
-    const parts = nb(q.text).split("___");
-    $("passage").replaceChildren(parts[0], ...q.blanks.flatMap((opts, i) => {
-      const b = Object.assign(document.createElement("input"), { placeholder: i + 1, ariaLabel: `空欄 ${i + 1}`, autocomplete: "off",
+    let i = 0; // 通しの空欄番号
+    const blank = () => {
+      const opts = q.blanks[i++];
+      const b = Object.assign(document.createElement("input"), { placeholder: i, ariaLabel: `空欄 ${i}`, autocomplete: "off",
         spellcheck: false, enterKeyHint: "go", autocapitalize: /^\p{Lu}/u.test(opts[0]) ? "sentences" : "off" });
       b.setAttribute("autocorrect", "off");
-      if (state.results[`${q.id}-${i + 1}`] === "correct") {
+      if (state.results[`${q.id}-${i}`] === "correct") {
         b.value = opts[0];
         b.readOnly = true;
         b.dataset.r = "correct";
       }
-      return [span("paren", "("), b, span("paren", ")"), parts[i + 1]];
-    }));
+      return [span("paren", "("), b, span("paren", ")")];
+    };
+    const fill = (s) => nb(s).split("___").flatMap((t, j) => (j ? [...blank(), t] : [t]));
+    // 会話は「話し手 : 台詞」の行を、話し手と台詞の2列に並べる
+    const dialog = q.type === "dialog";
+    $("passage").classList.toggle("dialog", dialog);
+    $("passage").replaceChildren(...(dialog
+      ? q.text.split("\n").flatMap((l) => {
+          const [, who, said] = l.match(/^(.*?) : (.*)$/);
+          const line = document.createElement("span");
+          line.append(...fill(said));
+          return [span("who", who), line];
+        })
+      : fill(q.text)));
   }
   sync();
-  focus(q.blanks ? blanks().find((b) => !b.readOnly) : input);
+  // 次の問題はいちばん上から見せる (長文を解いたあとは下まで送っていて、頭が見切れる)。スクロールの動きはつけず一気に
+  scrollTo({ top: 0, behavior: "instant" });
+  // 長文は出したときにはフォーカスしない。iOS は入力欄にフォーカスすると拡大するので、まず全体を読めるように
+  if (q.blanks) document.activeElement.blur();
+  else focus();
   // 問題が変わったのがわかるように、ふわっと出す
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
     main.animate([{ opacity: 0, transform: "translateY(.6rem)" }, {}], { duration: 400, easing: "ease-out" });
@@ -124,14 +141,29 @@ $("form").addEventListener("touchstart", (e) => {
   if (e.target.matches("input") && innerHeight - vv.height < 100) e.target.blur();
 });
 
-// 長文の候補。datalist は iOS だとキーボードの予測欄に1つ出るだけなので、フォーカスした空欄の候補 (アルファベット順) を
-// キーボードの上に持ち上げてある #actions に並べる。押すと入れて、まだ空いている次の空欄へ移る
+// 長文の候補。datalist は iOS だとキーボードの予測欄に1つ出るだけなので、フォーカスした空欄のすぐ下に候補 (アルファベット順) を縦に並べる。
+// 見えている範囲 (iOS がフォーカスで拡大したあとも) からはみ出さないよう左右を寄せ、下に入らなければ空欄の上に出す。
+// 押すと入れて、まだ空いている次の空欄へ移る。押してもフォーカスは空欄に残す (キーボードを閉じない)
 let cur;
+const place = () => {
+  const o = $("opts");
+  if (!o.childElementCount) return;
+  const r = cur.getBoundingClientRect(); // layout viewport が基準。vv.offsetTop / pageLeft と合わせて見えている範囲を出す
+  const below = r.bottom + 4 + o.offsetHeight <= vv.offsetTop + vv.height - $("actions").offsetHeight;
+  o.style.top = `${scrollY + (below ? r.bottom + 4 : r.top - 4 - o.offsetHeight)}px`;
+  o.style.left = `${Math.max(vv.pageLeft + 4, Math.min(scrollX + r.left, vv.pageLeft + vv.width - 4 - o.offsetWidth))}px`;
+};
+vv.addEventListener("resize", place);
+vv.addEventListener("scroll", place);
 $("passage").addEventListener("focusin", ({ target: b }) => {
   cur = b;
-  const opts = b.readOnly ? [] : q.blanks[blanks().indexOf(b)].toSorted((x, y) => x.localeCompare(y, "fr"));
+  if (b.readOnly || answered()) return;
+  const opts = q.blanks[blanks().indexOf(b)].toSorted((x, y) => x.localeCompare(y, "fr"));
   $("opts").replaceChildren(...opts.map((o) => Object.assign(document.createElement("button"), { textContent: o, ariaPressed: String(o === b.value) })));
+  place();
 });
+$("passage").addEventListener("focusout", () => $("opts").replaceChildren());
+$("opts").onmousedown = (e) => e.preventDefault();
 $("opts").onclick = (e) => {
   const o = e.target.closest("button");
   if (!o || answered()) return;

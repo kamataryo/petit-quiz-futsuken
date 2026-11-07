@@ -122,6 +122,9 @@
 
   /* 長文。空欄は #answer と同じ見た目で、採点したら空欄ごとに色を付ける */
   #passage { margin: 0; font: 500 1.05rem/2 var(--display); white-space: pre-line; }
+  /* 会話は話し手と台詞の2列。台詞が長いときは台詞の列の中で折り返す */
+  #passage.dialog { display: grid; grid-template-columns: max-content 1fr; gap: .15rem 1em; }
+  #passage .who { color: var(--ink-soft); }
   #passage [data-r="correct"] { color: var(--ok); border-color: var(--ok); }
   #passage [data-r="partial"] { color: var(--part); border-color: var(--part); }
   #passage [data-r="wrong"] { color: var(--ng); border-color: var(--ng); text-decoration: line-through; }
@@ -151,9 +154,10 @@
   #fix, .fix { color: var(--ok); }
   #fix:not(:empty), .fix { margin-right: .15em; }
 
-  #choices, #opts { display: flex; flex-wrap: wrap; gap: .5rem; }
-  #opts { max-width: 44rem; margin: 0 auto .6rem; }
-  #opts:empty { display: none; }
+  #choices { display: flex; flex-wrap: wrap; gap: .5rem; }
+  /* 長文の候補。フォーカスした空欄の下に app.js が置く */
+  #opts { position: absolute; z-index: 1; display: flex; flex-direction: column; gap: .3rem; padding: .3rem; background: var(--paper); border: 1px solid var(--rule); border-radius: .6rem; box-shadow: 0 .3rem 1rem rgb(0 0 0 / .25); }
+  #opts:empty, main[data-result] ~ #opts { display: none; }
   #choices button, #opts button {
     font: 1.15rem var(--display);
     color: inherit;
@@ -164,7 +168,7 @@
     cursor: pointer;
   }
   #choices [aria-pressed="true"], #opts [aria-pressed="true"] { border-color: var(--focus); color: var(--focus); }
-  #opts button { font-size: 1rem; padding: .2rem .8rem; }
+  #opts button { font-size: 1rem; padding: .2rem .8rem; text-align: left; white-space: nowrap; }
   #choices .answer { border-color: var(--ok); color: var(--ok); }
 
   #result { font-weight: 600; }
@@ -194,7 +198,7 @@
      答え合わせの前は「回答する」、あとは「次にすすむ」だけを出す */
   #actions { position: fixed; left: 0; right: 0; bottom: 0; padding: .6rem 1rem; background: var(--paper); border-top: 1px solid var(--rule); }
   #actions > button { display: block; width: 100%; max-width: 44rem; margin: 0 auto; padding: .7rem; font: 600 1rem var(--body); color: var(--paper); background: var(--ink); border: 0; border-radius: .5rem; cursor: pointer; }
-  main[data-result] ~ #actions #submit, main[data-result] ~ #actions #opts, main:not([data-result]) ~ #actions #next, main[hidden] ~ #actions { display: none; }
+  main[data-result] ~ #actions #submit, main:not([data-result]) ~ #actions #next, main[hidden] ~ #actions { display: none; }
   /* 押せないときはタップを下の #actions に通す。そこで mousedown を止めているので、入力欄からフォーカスが外れずキーボードも閉じない */
   #actions > button:disabled { opacity: .4; cursor: default; pointer-events: none; }
 
@@ -277,8 +281,8 @@
 </main>
 <p id="empty" hidden>間違えた問題はありません。<small>「全問から出題する」で全問にもどれます。</small></p>
 <p id="done" hidden>全問解き終わりました。<small>「間違えた問題だけ解く」で復習するか、「記録をリセット」で最初から解き直せます。</small></p>
+<div id="opts" lang="fr"></div>
 <div id="actions">
-  <div id="opts" lang="fr"></div>
   <button id="submit" form="form">回答する</button>
   <button id="next" form="form">次にすすむ</button>
 </div>

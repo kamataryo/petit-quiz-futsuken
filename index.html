@@ -25,7 +25,7 @@
     --ink-soft: #616A88;
     --rule: #D9D4E6;
     --ok: #1E7A5B;
-    --part: #A86A00;
+    --part: #9A6200; /* 地の色と 4.5:1 以上 (判定の行は 16px) */
     --ng: #C4453C;
     --focus: #3B57C4;
     --display: "Bodoni Moda", "Hiragino Mincho ProN", serif;
@@ -137,7 +137,8 @@
   }
   @supports not (field-sizing: content) { #answer { width: 6em; } }
   #answer:focus { border-color: var(--focus); }
-  #answer::placeholder { color: var(--ink-soft); opacity: .55; }
+  /* 頭文字のヒントは答えに要る情報なので、大きい文字で 3:1 を下回らない濃さにする */
+  #answer::placeholder { color: var(--ink-soft); opacity: .8; }
   [data-result="correct"] #answer { color: var(--ok); border-color: var(--ok); }
   [data-result="partial"] #answer { color: var(--part); border-color: var(--part); }
   [data-result="wrong"] #answer { color: var(--ng); border-color: var(--ng); text-decoration: line-through; }
@@ -228,6 +229,14 @@
   }
   .alt { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); gap: .3rem .75rem; font-size: .85rem; font-variant-numeric: tabular-nums; }
   .alt b { font: 500 1.15rem var(--display); margin-right: .4rem; }
+
+  /* マウスで押せるものに乗ったら少し濃くする。押せないもの (答えたあとの語群、無効のボタン) と選択中のものは変えない */
+  @media (hover: hover) {
+    main:not([data-result]) #choices button:not([aria-pressed="true"]):hover,
+    footer button:not(:disabled):hover { border-color: var(--ink-soft); }
+    .close:hover, .seg button:not([aria-pressed="true"]):hover { color: var(--ink); }
+    #actions button:not(:disabled):hover { opacity: .85; }
+  }
 </style>
 
 <header>

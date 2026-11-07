@@ -140,10 +140,10 @@ $("form").onsubmit = (e) => {
   if (over > 0) scrollBy(0, Math.min(over, $("result").getBoundingClientRect().top - vv.offsetTop));
 };
 
-// 答え合わせのあと入力欄の外をクリックしていても、Enter で次へ進む
+// 答え合わせのあと入力欄の外をクリックしていても、Enter で次へ進む。ボタンの上の Enter はそのボタンを押す (アクサンの入力方法など)
 document.addEventListener("keydown", (e) => {
   if ($("keys").open) return;
-  if (e.key === "Enter" && input.readOnly && e.target !== input) { e.preventDefault(); next(); }
+  if (e.key === "Enter" && input.readOnly && !e.target.closest("button, input")) { e.preventDefault(); next(); }
 });
 
 // アクサン入力の早見表。開いたときは OS に合わせ、中の切り替えで Mac / Windows を見比べられる

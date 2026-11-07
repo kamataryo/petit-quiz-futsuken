@@ -98,6 +98,9 @@ test("シードの {名前} はすべて vars で埋まり、埋めても同じ�
       assert.equal(x.id, q.id);
       // 欄の書き忘れは undefined、{名前.欄} の欄がない要素は [object Object] になって出る
       assert.ok(!/[{}]|undefined|\[object/.test([x.text, x.a, x.hint, x.ja].join(" ")), `${q.id} ${x.text}`);
+      // 母音の前のエリジョン漏れ (de apprendre など)。答えは固定でも、vars で入る語が母音で始まると起きる
+      const fr = [x.text.replace("___", x.answers[0]), x.a].join(" ");
+      assert.ok(!/(?<!\p{L})(de|que|le|la|je|ne|se|me|te|ce|jusque) [aeiouâàéèêîôûœ]/iu.test(fr), `${q.id} ${fr}`);
     }
   }
 });

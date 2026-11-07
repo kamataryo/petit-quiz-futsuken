@@ -14,6 +14,8 @@ const focus = () => {
 // grade の結果を3段に畳む。case (大文字小文字だけ違う) と accent (アクサンだけ違う) は部分正解
 const bucket = (r) => (r === "correct" || r === "wrong" ? r : "partial");
 const MARK = { correct: "◎", partial: "△", wrong: "×" };
+// フランス語は ? ! : ; の前に空白を置く。記号だけ次の行に落ちないよう、改行しない細い空白にする
+const nb = (s) => s?.replace(/ ([?!:;])/g, " $1");
 
 // 級は ?level=pre2 で選ぶ。画面での切り替えはまだない
 const level = new URLSearchParams(location.search).get("level") ?? Object.keys(levels)[0];
@@ -43,8 +45,8 @@ function render() {
   $("n-total").textContent = pool.length;
   const missed = n.partial + n.wrong;
   $("mode").textContent = state.mode === "missed"
-    ? `全問から出題する（復習のこり ${missed} 問）`
-    : `間違えた問題だけ解く（${missed} 問）`;
+    ? `全問から出題する（復習のこり ${missed} 問）`
+    : `間違えた問題だけ解く（${missed} 問）`;
   $("mode").disabled = state.mode === "all" && !missed;
   document.body.dataset.mode = state.mode;
 }
@@ -67,13 +69,15 @@ function next() {
   const { label, choices: n } = types[q.type];
   $("type").textContent = label;
   $("hint").textContent = q.hint ?? "";
-  $("a").textContent = q.a ?? "";
+  $("a").textContent = nb(q.a) ?? "";
   $("a-line").hidden = $("tag-b").hidden = !q.a;
   // 入力欄は DOM から外さずに前後の文だけ差し替える。外すとスマホのキーボードが閉じる
-  [$("before").textContent, $("after").textContent] = q.text.split("___");
+  [$("before").textContent, $("after").textContent] = nb(q.text).split("___");
   $("fix").textContent = $("result").textContent = $("ja").textContent = $("note").textContent = "";
   // 文頭の空欄では語群も大文字で始める。押して入れた語が大文字・小文字違いにならないように
   const head = atHead(q.text);
+  // 大文字小文字も採点するので、文頭の空欄だけスマホのキーボードを大文字から始める
+  input.autocapitalize = head ? "sentences" : "off";
   $("choices").replaceChildren(...(n ? choices(q, questions, n) : []).map((w) =>
     Object.assign(document.createElement("button"), { type: "button", textContent: head ? w[0].toUpperCase() + w.slice(1) : w })));
   input.value = "";
@@ -121,11 +125,17 @@ $("form").onsubmit = (e) => {
   input.placeholder = "";
   if (r !== "correct") $("fix").textContent = q.answers[0];
   const why = { case: "大文字・小文字違い", accent: "アクサン違い", wrong: "不正解" }[r];
-  $("result").textContent = r === "correct" ? "◎ 正解" : `${MARK[bucket(r)]} ${why} — ${q.answers.join(" / ")}`;
+  // 語群のある形式は先頭の答えだけ出す。別解 (語群にない動詞など) は採点では通すが、出すと「語群から選ぶ」と食い違う
+  const shown = types[q.type].choices ? q.answers.slice(0, 1) : q.answers;
+  $("result").textContent = r === "correct" ? "◎ 正解" : `${MARK[bucket(r)]} ${why} — ${shown.join(" / ")}`;
   $("ja").textContent = q.ja ?? "";
   $("note").textContent = q.note ?? "";
   for (const b of $("choices").children) b.classList.toggle("answer", b.textContent.toLowerCase() === choiceOf(q));
   render();
+  // 判定と解説が、キーボードと下のボタンに隠れないところまで送る。判定の行は見えている範囲の上端より上に出さない
+  const last = [$("note"), $("ja"), $("result")].find((e) => e.textContent);
+  const over = last.getBoundingClientRect().bottom - (vv.offsetTop + vv.height - $("actions").offsetHeight);
+  if (over > 0) scrollBy(0, Math.min(over, $("result").getBoundingClientRect().top - vv.offsetTop));
 };
 
 // 答え合わせのあと入力欄の外をクリックしていても、Enter で次へ進む
@@ -142,7 +152,8 @@ const setOs = (os) => {
 setOs(/win/i.test(navigator.userAgentData?.platform ?? navigator.platform) ? "win" : "mac");
 $("keys").querySelector(".seg").onclick = (e) => e.target.dataset.os && setOs(e.target.dataset.os);
 $("open-keys").onclick = () => $("keys").showModal();
-$("keys").onclick = (e) => e.target === $("keys") && $("keys").close(); // 枠の外 (背景) を押したら閉じる
+// 枠の外 (背景) を押したら閉じる。式で書くと false を返し、on* では preventDefault 扱いになって × (method="dialog") が効かなくなる
+$("keys").onclick = (e) => { if (e.target === $("keys")) $("keys").close(); };
 $("keys").onclose = () => input.focus();
 
 // 回答する・次にすすむはどちらもフォームの送信ボタン。onsubmit が採点か次へかを決める (next() はタップの中で focus するので、キーボードもまた開く)

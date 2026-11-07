@@ -91,7 +91,9 @@
   #bar i { background: var(--c); transition: width .3s; }
   @media (max-width: 34rem) {
     header { grid-template-columns: 1fr; }
-    #stats { justify-content: space-between; }
+    /* 間隔は space-between に任せ、すき間の下限は詰める。幅 320px でもはみ出さない */
+    #stats { justify-content: space-between; gap: .5rem; }
+    #stats .total { padding-left: .5rem; }
   }
 
   /* タップでキーボードを出すために click を拾っているので、iOS が main 全体を灰色に光らせないようにする */
@@ -205,7 +207,12 @@
   .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: .5rem; overflow: hidden; }
   .seg button { font: .85rem var(--body); padding: .3rem .8rem; background: none; color: var(--ink-soft); border: 0; cursor: pointer; }
   .seg [aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-  .close { font: 1.3rem/1 var(--body); color: var(--ink-soft); background: none; border: 0; padding: .2rem .4rem; cursor: pointer; }
+  .close { font: 1.3rem/1 var(--body); color: var(--ink-soft); background: none; border: 0; padding: .2rem .4rem; cursor: pointer; min-width: 2.2rem; min-height: 2.2rem; } /* スマホで 44px 以上 */
+  /* 狭い画面では Mac / Windows を2行目に回す。1行に詰めると見出しが細く割れ、切り替えが × の下に潜る */
+  @media (max-width: 34rem) {
+    .head { flex-wrap: wrap; }
+    .seg { order: 1; }
+  }
   #keys h3 { font: 600 .9rem var(--body); margin: .6rem 0 0; }
   #keys p { margin: 0; }
   .sub { font-size: .8rem; line-height: 1.7; color: var(--ink-soft); }
@@ -247,10 +254,11 @@
       <p class="line"><b id="tag-b" class="tag">B</b><span><span id="before"></span><span class="paren">(</span><input id="answer" lang="fr" aria-label="答え" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span id="fix"></span><span class="paren">)</span><span id="after"></span></span></p>
     </form>
   </div>
-  <div id="choices" lang="fr"></div>
+  <!-- 判定と解説は文のすぐ下に出す。語群の下だとスマホでは画面の外になる -->
   <p id="result" aria-live="polite"></p>
   <p id="ja"></p>
   <p id="note"></p>
+  <div id="choices" lang="fr"></div>
 </main>
 <p id="empty" hidden>間違えた問題はありません。<small>「全問から出題する」で全問にもどれます。</small></p>
 <p id="done" hidden>全問解き終わりました。<small>「間違えた問題だけ解く」で復習するか、「記録をリセット」で最初から解き直せます。</small></p>

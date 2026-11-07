@@ -7,6 +7,7 @@
 | `questions.json` | 問題のシード。`levels` (級) / `types` (形式) / `pools` (入れ替える語) / `questions` |
 | `quiz.js` | 採点・語群・入れ替え。字まで合えば ◎、大文字小文字かアクサン (と œ æ) だけ違えば △ |
 | `app.js` | 画面。問題を切り混ぜて出し (まだ答えていない問題が先)、尽きたら切り直す |
+| `keys.js` | アクサン入力の早見表。`index.html` と `dictée.html` で共用し、読み込むと dialog を足して `#open-keys` で開く |
 
 `fetch` を使うので `file://` では動かない。`python3 -m http.server` などで開く。テストは `node --test`。
 

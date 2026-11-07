@@ -1,4 +1,5 @@
 import { atHead, choiceOf, choices, grade, instantiate, seeded, shuffle } from "./quiz.js";
+import "./keys.js";
 
 // iOS の自動の拡大 (入力欄にフォーカスしたときなど) を止める。長文の行の右が見切れ、下に固定したボタンや候補の位置もずれるため。
 // iOS は maximum-scale=1 でもピンチでは拡大できる。Android はピンチも止まってしまうので付けない (iPad は Mac の UA を名乗るのでタッチの数で見る)
@@ -293,16 +294,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && answered() && (!e.target.closest("button, input") || e.target.closest("#claims"))) { e.preventDefault(); next(); }
 });
 
-// アクサン入力の早見表。開いたときは OS に合わせ、中の切り替えで Mac / Windows を見比べられる
-const setOs = (os) => {
-  $("keys").dataset.os = os;
-  for (const b of $("keys").querySelectorAll(".seg button")) b.ariaPressed = String(b.dataset.os === os);
-};
-setOs(/win/i.test(navigator.userAgentData?.platform ?? navigator.platform) ? "win" : "mac");
-$("keys").querySelector(".seg").onclick = (e) => e.target.dataset.os && setOs(e.target.dataset.os);
-$("open-keys").onclick = () => $("keys").showModal();
-// 枠の外 (背景) を押したら閉じる。式で書くと false を返し、on* では preventDefault 扱いになって × (method="dialog") が効かなくなる
-$("keys").onclick = (e) => { if (e.target === $("keys")) $("keys").close(); };
+
+// アクサン入力の早見表 (keys.js) を閉じたら入力欄にもどる
 $("keys").onclose = () => input.focus();
 
 // 回答する・次にすすむはどちらもフォームの送信ボタン。onsubmit が採点か次へかを決める (next() はタップの中で focus するので、キーボードもまた開く)

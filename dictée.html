@@ -49,7 +49,15 @@
   .row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
   button, select { font: 1rem var(--body); color: var(--ink); background: none; border: 1px solid var(--rule); border-radius: .5rem; padding: .6rem 1rem; cursor: pointer; }
   #play { min-width: 7rem; font-weight: 600; color: var(--paper); background: var(--ink); border-color: var(--ink); }
-  #status { font-variant-numeric: tabular-nums; }
+  /* 読み上げの4回。済んだ回は ✓、今の回は塗る。丸の間を線でつなぐ */
+  #steps { flex: 1 1 14rem; display: flex; margin: 0; padding: 0; list-style: none; counter-reset: step; font-size: .8rem; color: var(--ink-soft); }
+  #steps li { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; gap: .3rem; counter-increment: step; }
+  #steps li::before { content: counter(step); position: relative; z-index: 1; display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border: 1px solid var(--rule); border-radius: 50%; background: var(--paper); font-variant-numeric: tabular-nums; }
+  #steps li + li::after { content: ""; position: absolute; top: .9rem; right: 50%; width: 100%; height: 1px; background: var(--rule); }
+  #steps .done::before { content: "✓"; color: var(--paper); background: var(--ok); border-color: var(--ok); }
+  #steps [aria-current]::before { color: var(--paper); background: var(--focus); border-color: var(--focus); }
+  #steps .done::after, #steps [aria-current]::after { background: var(--ok); }
+  #steps [aria-current] { color: var(--ink); font-weight: 600; }
   /* 16px 未満だと iOS がズームする */
   textarea { width: 100%; min-height: 10rem; padding: .75rem; font: 500 1.2rem/1.8 var(--display); color: var(--ink); background: none; border: 1px solid var(--rule); border-radius: .5rem; resize: vertical; }
   textarea:focus { outline: none; border-color: var(--focus); }
@@ -58,7 +66,8 @@
   del { color: var(--ng); }
   del.part { color: var(--part); }
   ins { color: var(--ok); text-underline-offset: .2em; }
-  del + ins { margin-left: .2em; }
+  /* 記号 (. , など) は打ち消し線や下線では見えないので、地に色を付けて囲む */
+  .punct { padding: 0 .2em; border-radius: .25em; text-decoration: none; background: color-mix(in srgb, currentColor 22%, transparent); }
   #score { font-weight: 600; }
   #ja { color: var(--ink-soft); line-height: 1.7; }
   footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); display: flex; flex-direction: column; align-items: start; gap: .6rem; }
@@ -77,10 +86,13 @@
   <p id="howto">フランス語の文章を4回読みます。1回目と2回目はふつうの速さで、3回目はポーズをおいてゆっくり (句読点も読みます)、最後にもう1回ふつうの速さで読みます。全文を書き取ってください。</p>
   <div class="row">
     <button id="play" type="button" aria-pressed="false"></button>
-    <span id="status" aria-live="polite"></span>
+    <ol id="steps" aria-label="読み上げの順"></ol>
   </div>
   <textarea id="text" lang="fr" aria-label="書き取り" autocomplete="off" autocapitalize="sentences" autocorrect="off" spellcheck="false"></textarea>
-  <div class="row"><button id="check" type="button">答え合わせ</button></div>
+  <div class="row">
+    <button id="check" type="button">答え合わせ</button>
+    <button id="open-keys" type="button">アクサンの入力方法</button>
+  </div>
   <p id="score" aria-live="polite"></p>
   <p id="diff" lang="fr"></p>
   <p id="ja"></p>
@@ -93,13 +105,14 @@
 
 <script type="module">
 import { diffWords } from "./quiz.js";
+import "./keys.js";
 
 // 読み上げの順。ブラウザの読み上げ (speechSynthesis) で読む
 const ROUNDS = ["normal", "normal", "slow", "normal"];
-const LABEL = { normal: "ふつうの速さ", slow: "ゆっくり (句読点も読みます)" };
+const LABEL = { normal: "ふつう", slow: "ゆっくり" };
 // ゆっくりは区切り (/) ごとに読み、句読点を言って、書く間を空ける。
 // 間は公式の音声 (区切りごとに 10 秒前後) に合わせた目安。短すぎたら pause を伸ばす
-const RATE = { normal: 1, slow: 0.75 };
+const RATE = { normal: 0.85, slow: 0.7 };
 const pause = (chunk) => 3000 + chunk.length * 300; // ms
 const GAP = 4000; // 回と回の間
 const PUNCT = { ".": "point", ",": "virgule", "?": "point d'interrogation", "!": "point d'exclamation" };
@@ -137,12 +150,18 @@ const answer = () => d.text.replaceAll(" / ", " ");
 
 // 再生のたびに run を増やす。止めたり問題を変えたりしたら、前の再生は次に待ち終えたところで抜ける
 let run = 0;
+// ステッパー。i より前を済み、i を今の回にする (-1 で何もなし、ROUNDS.length で全部済み)
+$("steps").replaceChildren(...ROUNDS.map((s) => el("li", "", LABEL[s])));
+const step = (i) => [...$("steps").children].forEach((li, j) => {
+  li.classList.toggle("done", j < i);
+  li.ariaCurrent = j === i ? "step" : null;
+});
 const stop = () => {
   run++;
   speechSynthesis.cancel();
   $("play").textContent = "▶ 再生";
   $("play").ariaPressed = "false";
-  $("status").textContent = "";
+  step(-1);
 };
 
 $("play").onclick = async () => {
@@ -155,7 +174,7 @@ $("play").onclick = async () => {
   try {
     // 最初の音はタップの中で鳴らす (iOS はそうしないと鳴らない)。await の前に say を呼んでいる
     for (const [i, speed] of ROUNDS.entries()) {
-      $("status").textContent = `${i + 1} / ${ROUNDS.length} 回目　${LABEL[speed]}`;
+      step(i);
       if (speed === "slow") {
         for (const c of d.text.split(" / ")) {
           const [, words, p] = c.match(/^(.*?)([.,?!]?)$/);
@@ -169,7 +188,7 @@ $("play").onclick = async () => {
       }
     }
     stop();
-    $("status").textContent = "読み終わりました";
+    step(ROUNDS.length);
   } catch {} // 止めたとき (go が投げる)
 };
 
@@ -186,12 +205,19 @@ $("check").onclick = () => {
   const n = { correct: 0, case: 0, accent: 0, missing: 0 };
   for (const { r } of out) if (r in n) n[r]++;
   $("score").textContent = `◎ ${n.correct}　△ ${n.case + n.accent}　× ${n.missing}　(全 ${n.correct + n.case + n.accent + n.missing})`;
+  const mark = (tag, tok, cls = "") => el(tag, /^[\p{L}\p{N}]/u.test(tok) ? cls : `${cls} punct`, tok);
   $("diff").replaceChildren(...out.flatMap(({ word, input, r }, k) => [
     k && !/^[.,]$/.test(word ?? input) ? " " : "",
-    ...(r === "correct" ? [word] : [input && el("del", r === "extra" ? "" : "part", input), word && el("ins", "", word)].filter(Boolean)),
+    ...(r === "correct" ? [word]
+      : r === "extra" ? [mark("del", input)]
+      : r === "missing" ? [mark("ins", word)]
+      : [mark("del", input, "part"), " ", mark("ins", word)]),
   ]));
   $("ja").textContent = d.ja;
 };
+
+// アクサン入力の早見表 (keys.js) を閉じたら書き取りの欄にもどる
+$("keys").onclose = () => $("text").focus();
 
 dictees.forEach((x, i) => $("pick").add(new Option(x.name, i)));
 $("pick").onchange = () => {

@@ -64,3 +64,24 @@ export function grade(input, answers) {
   }
   return "wrong";
 }
+
+// 書き取りの答え合わせ。語と記号 (. , など) に切り、アクサンと大文字小文字を除いて合う語がいちばん多くなるように並べる (LCS)。
+// 合った語は grade の結果 (correct / case / accent)、書き落とした語は missing、余分に書いた語は extra。
+// 書き違えた語は extra と missing の組になる。返すのは { word (答えの語), input (書いた語), r } の列
+const tokens = (s) => norm(s).match(/[\p{L}\p{M}\p{N}'-]+|\S/gu) ?? [];
+export function diffWords(input, answer) {
+  const a = tokens(answer), b = tokens(input);
+  const A = a.map(bare), B = b.map(bare);
+  // L[i][j] は a[i..] と b[j..] で合う語の数の最大
+  const L = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+  for (let i = a.length - 1; i >= 0; i--)
+    for (let j = b.length - 1; j >= 0; j--)
+      L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out = [];
+  for (let i = 0, j = 0; i < a.length || j < b.length; ) {
+    if (i < a.length && A[i] === B[j]) { out.push({ word: a[i], input: b[j], r: grade(b[j], [a[i]]) }); i++; j++; }
+    else if (j < b.length && (i === a.length || L[i][j + 1] >= L[i + 1][j])) out.push({ input: b[j++], r: "extra" });
+    else out.push({ word: a[i++], r: "missing" });
+  }
+  return out;
+}

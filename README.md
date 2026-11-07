@@ -126,6 +126,21 @@ localStorage の `petit-quiz-futsuken` に、問題ごとの最後の結果 (`id
 `word` (語彙) の問題で `note` に対義語・類義語 (`⇔` や `=`) を書いたら、その語を答えにした問題も別の `id` で足して、
 両方を出す (`avoir raison` の `pre2-word-03` と `avoir tort` の `pre2-word-42` など)。記録は別々に付く。
 
+## 書き取り (`dictée.html` / `dictees.json`)
+
+準2級の書き取り (ディクテ)。再生ボタンで ふつう → ふつう → ゆっくり → ふつう の4回を通しで読み、何回目かを出す。
+textarea に書いて「答え合わせ」を押すと、語ごとに比べる (`diffWords`)。アクサン・大文字小文字だけ違えば △、書き違えた語・抜けた語は ×。記録は付けない。
+
+```json
+{ "name": "練習 1", "text": "Ma sœur habite à Lyon / depuis le printemps. / Elle travaille / …", "ja": "全訳" }
+```
+
+- 音声はブラウザの読み上げ (speechSynthesis)。ゆっくりは ` / ` の区切りごとに読み、句読点 (point, virgule) を言って、書く間を空ける。
+  句読点は区切りの終わりにだけ置く (テストが見ている)。速さと間は `dictée.html` の `RATE` / `pause` で変える
+- 声は端末に入っているフランス語の声から選ぶ (localStorage の `petit-quiz-futsuken-voice` に覚える)。
+  既定はプレミアム・拡張 > Google > ほか。Eddy や Grandma などの粗い声は後ろに回す
+- 答えは `text` から ` / ` を抜いたもの。数は数字で書く
+
 ## 2級以上を足すとき
 
 `levels` に `"2": "2級"` を足し、`"level": "2"` の問題を足す。新しい形式なら `types` も足す。

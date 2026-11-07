@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>書き取り | Petit Quiz Futsuken</title>
+<meta name="description" content="仏検の書き取り (ディクテ)">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600&family=Bodoni+Moda:opsz,wght@6..96,400..600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
+<style>
+  /* 色と字は index.html と同じ */
+  :root {
+    --paper: #FCFCFA;
+    --ink: #1A2440;
+    --ink-soft: #616A88;
+    --rule: #D9D4E6;
+    --ok: #1E7A5B;
+    --part: #9A6200;
+    --ng: #C4453C;
+    --focus: #3B57C4;
+    --display: "Bodoni Moda", "Hiragino Mincho ProN", serif;
+    --body: "Archivo", "Zen Kaku Gothic New", system-ui, "Hiragino Sans", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #11131C;
+      --ink: #D6D8E4;
+      --ink-soft: #9098B4;
+      --rule: #34364A;
+      --ok: #55C296;
+      --part: #E8B04B;
+      --ng: #F07C72;
+      --focus: #8FA3FF;
+      --display: ui-serif, Georgia, "Hiragino Mincho ProN", serif;
+    }
+  }
+  * { box-sizing: border-box; }
+  @media (max-width: 34rem) { html { font-size: clamp(125%, 5.8vw, 156.25%); } }
+  body { margin: 0; padding: 1rem; background: var(--paper); color: var(--ink); font-family: var(--body); -webkit-text-size-adjust: 100%; }
+  header, main, footer { max-width: 44rem; margin-inline: auto; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .75rem 1rem; margin-bottom: 1.5rem; }
+  h1 { font: italic 500 1.3rem var(--display); margin: 0; }
+  h1 small { margin-left: .5rem; font: .8rem var(--body); color: var(--ink-soft); }
+  main { display: flex; flex-direction: column; gap: 1rem; }
+  main p { margin: 0; }
+  #howto { font-size: .9rem; line-height: 1.7; color: var(--ink-soft); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+  button, select { font: 1rem var(--body); color: var(--ink); background: none; border: 1px solid var(--rule); border-radius: .5rem; padding: .6rem 1rem; cursor: pointer; }
+  #play { min-width: 7rem; font-weight: 600; color: var(--paper); background: var(--ink); border-color: var(--ink); }
+  #status { font-variant-numeric: tabular-nums; }
+  /* 16px 未満だと iOS がズームする */
+  textarea { width: 100%; min-height: 10rem; padding: .75rem; font: 500 1.2rem/1.8 var(--display); color: var(--ink); background: none; border: 1px solid var(--rule); border-radius: .5rem; resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--focus); }
+  /* 答え合わせ。書き違えた語は打ち消し、正しい語 (書き落とした語も) は緑で出す。index.html の答えの直しと同じ色分け */
+  #diff { font: 500 1.2rem/2 var(--display); }
+  del { color: var(--ng); }
+  del.part { color: var(--part); }
+  ins { color: var(--ok); text-underline-offset: .2em; }
+  del + ins { margin-left: .2em; }
+  #score { font-weight: 600; }
+  #ja { color: var(--ink-soft); line-height: 1.7; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); display: flex; flex-direction: column; align-items: start; gap: .6rem; }
+  footer label { display: flex; align-items: center; gap: .5rem; max-width: 100%; }
+  footer select { min-width: 0; max-width: 100%; }
+  .sub { margin: 0; font-size: .8rem; line-height: 1.7; color: var(--ink-soft); }
+  footer a { color: var(--ink-soft); }
+  @media (hover: hover) { button:hover, select:hover { border-color: var(--ink-soft); } #play:hover { opacity: .85; } }
+</style>
+
+<header>
+  <h1>Petit Quiz Futsuken<small>書き取り</small></h1>
+  <select id="pick" aria-label="問題"></select>
+</header>
+<main>
+  <p id="howto">フランス語の文章を4回読みます。1回目と2回目はふつうの速さで、3回目はポーズをおいてゆっくり (句読点も読みます)、最後にもう1回ふつうの速さで読みます。全文を書き取ってください。</p>
+  <div class="row">
+    <button id="play" type="button" aria-pressed="false"></button>
+    <span id="status" aria-live="polite"></span>
+  </div>
+  <textarea id="text" lang="fr" aria-label="書き取り" autocomplete="off" autocapitalize="sentences" autocorrect="off" spellcheck="false"></textarea>
+  <div class="row"><button id="check" type="button">答え合わせ</button></div>
+  <p id="score" aria-live="polite"></p>
+  <p id="diff" lang="fr"></p>
+  <p id="ja"></p>
+</main>
+<footer>
+  <label>声 <select id="voice"></select></label>
+  <p class="sub">声が粗いときは、Mac・iPhone の設定 (アクセシビリティ → 読み上げコンテンツ → 声) でフランス語のプレミアム・拡張の声を入れると選べます。</p>
+  <a href="./">1問1答にもどる</a>
+</footer>
+
+<script type="module">
+import { diffWords } from "./quiz.js";
+
+// 読み上げの順。ブラウザの読み上げ (speechSynthesis) で読む
+const ROUNDS = ["normal", "normal", "slow", "normal"];
+const LABEL = { normal: "ふつうの速さ", slow: "ゆっくり (句読点も読みます)" };
+// ゆっくりは区切り (/) ごとに読み、句読点を言って、書く間を空ける。
+// 間は公式の音声 (区切りごとに 10 秒前後) に合わせた目安。短すぎたら pause を伸ばす
+const RATE = { normal: 1, slow: 0.75 };
+const pause = (chunk) => 3000 + chunk.length * 300; // ms
+const GAP = 4000; // 回と回の間
+const PUNCT = { ".": "point", ",": "virgule", "?": "point d'interrogation", "!": "point d'exclamation" };
+
+const dictees = await fetch("./dictees.json").then((r) => r.json());
+const $ = (id) => document.getElementById(id);
+const el = (tag, className, textContent) => Object.assign(document.createElement(tag), { className, textContent });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// 声。端末に入っているフランス語の声を、よさそうな順に並べて選べるようにする (選んだ声は覚えておく)。
+// プレミアム・拡張 (システム設定で入れられる) > Google (Chrome) > ほか。Eddy や Grandma などは合成の粗い声なので最後。カナダの声はフランスの声の後ろ
+const KEY = "petit-quiz-futsuken-voice";
+const ROUGH = /^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley)\b/;
+const rank = (v) => (ROUGH.test(v.name) ? 100 : 0) + (/FR/.test(v.lang) ? 0 : 10) +
+  [/premium|プレミアム/i, /enhanced|拡張|amélioré/i, /^Google/, /./].findIndex((r) => r.test(v.name));
+let voices = [];
+const listVoices = () => {
+  voices = speechSynthesis.getVoices().filter((v) => /^fr/i.test(v.lang)).sort((a, b) => rank(a) - rank(b));
+  let saved;
+  try { saved = localStorage.getItem(KEY); } catch {}
+  $("voice").replaceChildren(...voices.map((v) => new Option(`${v.name} — ${v.lang}`, v.name, false, v.name === saved)));
+};
+speechSynthesis.onvoiceschanged = listVoices; // Chrome は声をあとから読み込む
+listVoices();
+
+let utt; // Chrome は参照の切れた発話の end を出さないことがあるので持っておく
+const say = (text, rate) => new Promise((res) => {
+  const voice = voices.find((v) => v.name === $("voice").value) ?? null;
+  utt = Object.assign(new SpeechSynthesisUtterance(text), { lang: "fr-FR", voice, rate, onend: res, onerror: res });
+  speechSynthesis.speak(utt);
+});
+
+let d; // 今の問題
+const answer = () => d.text.replaceAll(" / ", " ");
+
+// 再生のたびに run を増やす。止めたり問題を変えたりしたら、前の再生は次に待ち終えたところで抜ける
+let run = 0;
+const stop = () => {
+  run++;
+  speechSynthesis.cancel();
+  $("play").textContent = "▶ 再生";
+  $("play").ariaPressed = "false";
+  $("status").textContent = "";
+};
+
+$("play").onclick = async () => {
+  if ($("play").ariaPressed === "true") return stop();
+  const id = ++run;
+  const go = async (p) => { await p; if (id !== run) throw "stop"; };
+  $("play").textContent = "■ 停止";
+  $("play").ariaPressed = "true";
+  $("text").focus();
+  try {
+    // 最初の音はタップの中で鳴らす (iOS はそうしないと鳴らない)。await の前に say を呼んでいる
+    for (const [i, speed] of ROUNDS.entries()) {
+      $("status").textContent = `${i + 1} / ${ROUNDS.length} 回目　${LABEL[speed]}`;
+      if (speed === "slow") {
+        for (const c of d.text.split(" / ")) {
+          const [, words, p] = c.match(/^(.*?)([.,?!]?)$/);
+          await go(say(words, RATE.slow));
+          if (p) { await go(sleep(600)); await go(say(PUNCT[p], RATE.slow)); }
+          await go(sleep(pause(c)));
+        }
+      } else {
+        for (const s of answer().split(/(?<=[.?!]) /)) await go(say(s, RATE.normal)); // 1文ずつ。長い発話は Chrome が途中で切ることがある
+        if (i < ROUNDS.length - 1) await go(sleep(GAP));
+      }
+    }
+    stop();
+    $("status").textContent = "読み終わりました";
+  } catch {} // 止めたとき (go が投げる)
+};
+
+// 声を選んだら試しに読む。読み上げ中は変えるだけ (次の発話から変わる)
+$("voice").onchange = () => {
+  try { localStorage.setItem(KEY, $("voice").value); } catch {}
+  if ($("play").ariaPressed === "false") { speechSynthesis.cancel(); say("Bonjour, c'est une dictée.", RATE.normal); }
+};
+
+// 答え合わせ。答えの順に、合った語はそのまま、アクサン・大文字小文字違いは書いた語を打ち消して正しい語を、
+// 書き違えた語・余分な語は打ち消し、書き落とした語は正しい語を出す。数えるのは答えの語 (記号も含む)
+$("check").onclick = () => {
+  const out = diffWords($("text").value, answer());
+  const n = { correct: 0, case: 0, accent: 0, missing: 0 };
+  for (const { r } of out) if (r in n) n[r]++;
+  $("score").textContent = `◎ ${n.correct}　△ ${n.case + n.accent}　× ${n.missing}　(全 ${n.correct + n.case + n.accent + n.missing})`;
+  $("diff").replaceChildren(...out.flatMap(({ word, input, r }, k) => [
+    k && !/^[.,]$/.test(word ?? input) ? " " : "",
+    ...(r === "correct" ? [word] : [input && el("del", r === "extra" ? "" : "part", input), word && el("ins", "", word)].filter(Boolean)),
+  ]));
+  $("ja").textContent = d.ja;
+};
+
+dictees.forEach((x, i) => $("pick").add(new Option(x.name, i)));
+$("pick").onchange = () => {
+  stop();
+  d = dictees[$("pick").value];
+  $("text").value = $("score").textContent = $("ja").textContent = "";
+  $("diff").replaceChildren();
+};
+$("pick").onchange();
+</script>

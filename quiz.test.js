@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { atHead, choiceOf, choices, grade, instantiate, seeded, shuffle, variants } from "./quiz.js";
+import { atHead, choiceOf, choices, diffWords, grade, instantiate, seeded, shuffle, variants } from "./quiz.js";
 
 test("アクサンまで合えば正解、アクサンだけ違えば部分正解", () => {
   assert.equal(grade("à", ["à"]), "correct");
@@ -160,4 +160,21 @@ test("同じ種なら並びも入れ替えも同じ、種が違えば変わる",
   const xs = Array.from({ length: 1000 }, r);
   assert.ok(xs.every((x) => x >= 0 && x < 1));
   assert.ok(Math.abs(xs.reduce((p, x) => p + x) / 1000 - 0.5) < 0.05); // ならせば偏らない
+});
+
+test("書き取りは語ごとに比べる (アクサン違い・書き違い・抜け)", () => {
+  const show = (i, a) => diffWords(i, a).map(({ word = "", input = "", r }) => `${r}:${input}>${word}`).join(" ");
+  assert.equal(show("Il est ne chez ma grand-mère", "Il est né chez ma grand-mère."),
+    "correct:Il>Il correct:est>est accent:ne>né correct:chez>chez correct:ma>ma correct:grand-mère>grand-mère missing:>.");
+  assert.equal(show("j’y allé  souvent", "J'y allais souvent"), "case:j'y>J'y extra:allé> missing:>allais correct:souvent>souvent");
+  assert.equal(show("", "Oui."), "missing:>Oui missing:>.");
+});
+
+test("書き取りは読み上げの区切り (/) があり、句読点は区切りの終わりにだけ置く", () => {
+  const dictees = JSON.parse(readFileSync(new URL("./dictees.json", import.meta.url), "utf8"));
+  for (const d of dictees) {
+    assert.ok(d.name && d.ja, d.text);
+    assert.ok(d.text.includes(" / "), d.name); // ゆっくりは区切りごとに読む
+    for (const c of d.text.split(" / ")) assert.match(c, /^[^.,?!]+[.,?!]?$/, `${d.name}: ${c}`);
+  }
 });

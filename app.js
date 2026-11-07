@@ -123,10 +123,12 @@ $("form").onsubmit = (e) => {
   main.dataset.result = bucket(r);
   input.readOnly = true; // disabled だとフォーカスが外れてスマホのキーボードが閉じる
   input.placeholder = "";
-  if (r !== "correct") $("fix").textContent = q.answers[0];
+  // 部分正解なら、書こうとした答え (別解に寄せて書いたときはその別解) を出す
+  const near = r === "wrong" ? undefined : q.answers.find((a) => grade(input.value, [a]) === r);
+  if (r !== "correct") $("fix").textContent = near ?? q.answers[0];
   const why = { case: "大文字・小文字違い", accent: "アクサン違い", wrong: "不正解" }[r];
-  // 語群のある形式は先頭の答えだけ出す。別解 (語群にない動詞など) は採点では通すが、出すと「語群から選ぶ」と食い違う
-  const shown = types[q.type].choices ? q.answers.slice(0, 1) : q.answers;
+  // 不正解のとき、語群のある形式は先頭の答えだけ出す。別解 (語群にない動詞など) は採点では通すが、出すと「語群から選ぶ」と食い違う
+  const shown = near ? [near] : types[q.type].choices ? q.answers.slice(0, 1) : q.answers;
   $("result").textContent = r === "correct" ? "◎ 正解" : `${MARK[bucket(r)]} ${why} — ${shown.join(" / ")}`;
   $("ja").textContent = q.ja ?? "";
   $("note").textContent = q.note ?? "";

@@ -1,5 +1,10 @@
 import { atHead, choiceOf, choices, grade, instantiate, shuffle } from "./quiz.js";
 
+// iOS の自動の拡大 (入力欄にフォーカスしたときなど) を止める。長文の行の右が見切れ、下に固定したボタンや候補の位置もずれるため。
+// iOS は maximum-scale=1 でもピンチでは拡大できる。Android はピンチも止まってしまうので付けない (iPad は Mac の UA を名乗るのでタッチの数で見る)
+if (navigator.maxTouchPoints > 1 && /iPhone|iPad|Macintosh/.test(navigator.userAgent))
+  document.querySelector("meta[name=viewport]").content += ",maximum-scale=1";
+
 const { levels, types, pools, questions } = await fetch("./questions.json").then((r) => r.json());
 const $ = (id) => document.getElementById(id);
 const main = document.querySelector("main");

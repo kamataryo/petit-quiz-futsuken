@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { atHead, choiceOf, choices, grade, instantiate, shuffle, variants } from "./quiz.js";
+import { atHead, choiceOf, choices, grade, instantiate, seeded, shuffle, variants } from "./quiz.js";
 
 test("アクサンまで合えば正解、アクサンだけ違えば部分正解", () => {
   assert.equal(grade("à", ["à"]), "correct");
@@ -149,4 +149,15 @@ test("重み付きの切り混ぜは、末尾 (次に出る問題) に重みの�
   for (let i = 0; i < 6000; i++) if (shuffle(["a", "b"], (x) => (x === "a" ? 5 : 1)).at(-1) === "a") n++;
   assert.ok(Math.abs(n / 6000 - 5 / 6) < 0.05, String(n / 6000)); // 5 : 1 なら 5/6
   assert.deepEqual(shuffle([1, 2, 3]).sort(), [1, 2, 3]);
+});
+
+test("同じ種なら並びも入れ替えも同じ、種が違えば変わる", () => {
+  const a = Array.from({ length: 20 }, (_, i) => i);
+  const order = (s) => shuffle(a, undefined, (x) => seeded(`${s}-${x}`)());
+  assert.deepEqual(order("s"), order("s"));
+  assert.notDeepEqual(order("s"), order("t"));
+  const r = seeded("s");
+  const xs = Array.from({ length: 1000 }, r);
+  assert.ok(xs.every((x) => x >= 0 && x < 1));
+  assert.ok(Math.abs(xs.reduce((p, x) => p + x) / 1000 - 0.5) < 0.05); // ならせば偏らない
 });

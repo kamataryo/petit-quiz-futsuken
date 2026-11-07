@@ -1,7 +1,19 @@
 // 切り混ぜる。w(x) を渡すと重み付きになり、末尾から取っていくと、残りの中で次に出る確率が w に比例する。
-// 要素ごとに random ** (1 / w) を引いて並べる (Efraimidis–Spirakis の方法)。w がなければふつうの切り混ぜ
-export const shuffle = (a, w = () => 1) =>
-  a.map((x) => [Math.random() ** (1 / w(x)), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+// 要素ごとに random ** (1 / w) を引いて並べる (Efraimidis–Spirakis の方法)。w がなければふつうの切り混ぜ。
+// rand には要素を渡すので、要素ごとに決まった数を返せば並びも決まる
+export const shuffle = (a, w = () => 1, rand = Math.random) =>
+  a.map((x) => [rand(x) ** (1 / w(x)), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+
+// 文字列から決まる [0, 1) の乱数列。FNV-1a で種にして mulberry32 で回す。同じ文字列なら毎回同じ列
+export const seeded = (s) => {
+  let h = [...s].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261);
+  return () => {
+    h = (h + 0x6d2b79f5) | 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
 
 // 語群に並べる形。verb は不定詞 (cue)、ほかは先頭の正解
 export const choiceOf = (q) => (q.cue ?? q.answers[0]).toLowerCase();
@@ -13,13 +25,13 @@ export const atHead = (text) => /(^|[.!?]\s|—\s)$/.test(text.split("___")[0]);
 export const variants = ({ alts = [], ...q }) => [q, ...alts.map((a) => ({ ...q, ...a, vars: { ...q.vars, ...a.vars } }))];
 
 // 語群は正解1つと、同じ級・同じ形式のほかの問題 (alts の形も含む) から引いた n-1 語。この問題で正解になる語と avoid の語は混ぜない
-export function choices(q, questions, n) {
+export function choices(q, questions, n, rand = Math.random) {
   const own = new Set([choiceOf(q), ...q.answers.map((a) => a.toLowerCase()), ...(q.avoid ?? [])]);
   const pool = new Set(questions.flatMap(variants).filter((x) => x.level === q.level && x.type === q.type).map(choiceOf));
-  return shuffle([choiceOf(q), ...shuffle([...pool].filter((w) => !own.has(w))).slice(0, n - 1)]);
+  return shuffle([choiceOf(q), ...shuffle([...pool].filter((w) => !own.has(w)), undefined, rand).slice(0, n - 1)], undefined, rand);
 }
 
-// 元の形と alts から1つ選び、問題文の {名前} を vars に従って埋めた問題を返す。覚えてしまわないように、出すたびに変える。
+// 元の形と alts から1つ選び、問題文の {名前} を vars に従って埋めた問題を返す。
 // vars の値が pool 名なら pools から、ほかの一覧ならその中から1つ (同じ問題の中では重ならない)、[min, max, step] (数) ならその範囲の数。
 // 要素が { fr, ja } なら、日本語の欄 (hint, ja) には ja を使う。{名前.欄} でほかの欄も引ける。id は変えないので同じ問題として記録される
 export function instantiate(q, pools, rand = Math.random) {

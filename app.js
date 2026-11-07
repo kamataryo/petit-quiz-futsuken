@@ -1,4 +1,4 @@
-import { atHead, choiceOf, choices, grade, instantiate, shuffle } from "./quiz.js";
+import { atHead, choiceOf, choices, grade, instantiate, seeded, shuffle } from "./quiz.js";
 
 // iOS の自動の拡大 (入力欄にフォーカスしたときなど) を止める。長文の行の右が見切れ、下に固定したボタンや候補の位置もずれるため。
 // iOS は maximum-scale=1 でもピンチでは拡大できる。Android はピンチも止まってしまうので付けない (iPad は Mac の UA を名乗るのでタッチの数で見る)
@@ -31,11 +31,14 @@ const nb = (s) => s?.replace(/ ([?!:;»])/g, " $1").replace(/« /g, "« ");
 const level = new URLSearchParams(location.search).get("level") ?? Object.keys(levels)[0];
 const pool = questions.filter((x) => x.level === level);
 
-// 記録は問題ごとの最後の結果 (id → grade の結果) と出題モード (all / missed)
+// 記録は問題ごとの最後の結果 (id → grade の結果) と出題モード (all / missed) と乱数の種。
+// 種はリセットするまで変えない。出題の順も、人名や数の入れ替えも、語群もこの種で決まり、開き直しても同じになる
 const KEY = "petit-quiz-futsuken";
-const state = { results: {}, mode: "all" };
+const state = { results: {}, mode: "all", seed: Math.random() };
 try { Object.assign(state, JSON.parse(localStorage.getItem(KEY))); } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+save(); // 答える前に閉じても種が残るように
+const rand = (k) => seeded(`${state.seed}-${k}`);
 // 長文は空欄ごと (内容一致は文ごと) に `${id}-${番号}` で記録し、成績でも1つを1問と数える
 const ids = (x) => (x.blanks ?? x.claims)?.map((_, i) => `${x.id}-${i + 1}`) ?? [x.id];
 const isMissed = (id) => ![undefined, "correct"].includes(state.results[id]);
@@ -86,8 +89,9 @@ function next() {
   render();
   if (none) return;
   // 長文は残っている空欄 (内容一致は文) の数だけ (1〜6 倍) 先に出やすくする。1問1答は重み 1
-  if (!deck.length) deck = shuffle(pool.filter(isLeft), (x) => ids(x).filter(left).length);
-  q = instantiate(deck.pop(), pools); // 人名や数をここで埋める。id はそのまま
+  if (!deck.length) deck = shuffle(pool.filter(isLeft), (x) => ids(x).filter(left).length, (x) => rand(x.id)());
+  const r = rand(`${deck.at(-1).id}-q`); // 並びに使った数とは別の列にする
+  q = instantiate(deck.pop(), pools, r); // 人名や数をここで埋める。id はそのまま
   const { label, choices: n } = types[q.type];
   $("type").textContent = label;
   $("hint").textContent = q.hint ?? "";
@@ -100,7 +104,7 @@ function next() {
   const head = atHead(q.text);
   // 大文字小文字も採点するので、文頭の空欄だけスマホのキーボードを大文字から始める
   input.autocapitalize = head ? "sentences" : "off";
-  $("choices").replaceChildren(...(n ? choices(q, questions, n) : []).map((w) =>
+  $("choices").replaceChildren(...(n ? choices(q, questions, n, r) : []).map((w) =>
     Object.assign(document.createElement("button"), { type: "button", textContent: head ? w[0].toUpperCase() + w.slice(1) : w })));
   input.value = "";
   input.placeholder = n ? "" : q.cue ?? "";
@@ -320,6 +324,7 @@ $("reset").onclick = () => {
   if (!confirm("正解・不正解の記録をすべて消して、全問を最初から出題します。よろしいですか？")) return input.focus();
   state.results = {};
   state.mode = "all"; // 記録を消すと復習する問題はないので、全問にもどす
+  state.seed = Math.random();
   deck = [];
   save();
   next();

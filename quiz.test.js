@@ -36,8 +36,8 @@ const forms = questions.flatMap(variants); // alts も1問ずつ見る
 test("シードの問題が出題できる形になっている", () => {
   for (const q of forms) {
     assert.ok(levels[q.level] && types[q.type], q.text);
-    assert.equal(q.text.split("___").length, (q.blanks?.length ?? 1) + 1, q.text);
-    assert.ok((q.answers ?? q.blanks).length && (q.hint || q.ja || q.a), q.text);
+    assert.equal(q.text.split("___").length, (q.blanks?.length ?? (q.claims ? 0 : 1)) + 1, q.text);
+    assert.ok((q.answers ?? q.blanks ?? q.claims).length && (q.hint || q.ja || q.a), q.text);
     if (q.type === "word") assert.ok(q.answers.every((a) => a.startsWith(q.cue)), q.text);
     if (q.type === "verb") assert.ok(q.cue && q.a, q.text);
     // 語群のある問題の cue は「形を変えて書く」印。そのままの形が答えなら cue は要らない
@@ -89,19 +89,20 @@ test("alts は元の形とあわせて1つ選び、vars は元のものに足す
 
 test("シードの {名前} はすべて vars で埋まり、埋めても同じ問題のまま", () => {
   for (const q of forms) {
-    const used = [q.text, q.a, q.hint, q.ja].join(" ").match(/(?<=\{)\w+/g) ?? [];
+    const used = [q.text, q.a, q.hint, q.ja, ...(q.claims?.map((c) => c[0]) ?? [])].join(" ").match(/(?<=\{)\w+/g) ?? [];
     for (const k of used) assert.ok(q.vars?.[k], `${q.id} ${k}`);
     for (const spec of Object.values(q.vars ?? {})) assert.ok(typeof spec !== "string" || pools[spec], q.id);
-    assert.ok(!(q.answers ?? q.blanks.flat()).join().includes("{"), q.id); // 語群はほかの問題の answers から作るので、答えには入れない
+    assert.ok(!(q.answers ?? q.blanks?.flat() ?? []).join().includes("{"), q.id); // 語群はほかの問題の answers から作るので、答えには入れない
     for (let i = 0; i < 20; i++) {
       const x = instantiate(q, pools);
       assert.equal(x.id, q.id);
       // 欄の書き忘れは undefined、{名前.欄} の欄がない要素は [object Object] になって出る
-      assert.ok(!/[{}]|undefined|\[object/.test([x.text, x.a, x.hint, x.ja].join(" ")), `${q.id} ${x.text}`);
+      const claims = x.claims?.map((c) => c[0]) ?? [];
+      assert.ok(!/[{}]|undefined|\[object/.test([x.text, x.a, x.hint, x.ja, ...claims].join(" ")), `${q.id} ${x.text}`);
       // 母音の前のエリジョン漏れ (de apprendre など)。答えは固定でも、vars で入る語が母音で始まると起きる
-      const ans = x.answers ?? x.blanks.map((b) => b[0]);
+      const ans = x.answers ?? x.blanks?.map((b) => b[0]) ?? [];
       let k = 0;
-      const fr = [x.text.replace(/___/g, () => ans[k++]), x.a].join(" ");
+      const fr = [x.text.replace(/___/g, () => ans[k++]), x.a, ...claims].join(" ");
       assert.ok(!/(?<!\p{L})(de|que|le|la|je|ne|se|me|te|ce|jusque) [aeiouâàéèêîôûœ]/iu.test(fr), `${q.id} ${fr}`);
     }
   }
@@ -130,6 +131,16 @@ test("長文は空欄が5つで、それぞれ別々の候補が3つ (先頭が�
     });
     // 会話は行ごとに話し手と台詞の2列に分けて出す
     if (q.type === "dialog") for (const l of q.text.split("\n")) assert.match(l, /^\{\w+\} : /, q.id);
+  }
+});
+
+test("内容一致は文が6つで、○ と × がどちらもあり、解説は文ごとに1行", () => {
+  for (const q of forms.filter((x) => x.claims)) {
+    assert.equal(q.claims.length, 6, q.id);
+    assert.ok(q.claims.every(([s, ok]) => typeof s === "string" && typeof ok === "boolean"), q.id);
+    const n = q.claims.filter(([, ok]) => ok).length;
+    assert.ok(n > 0 && n < 6, q.id);
+    assert.equal(q.note.split("\n").length, 6, q.id);
   }
 });
 

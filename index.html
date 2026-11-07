@@ -158,7 +158,7 @@
   /* 長文の候補。フォーカスした空欄の下に app.js が置く */
   #opts { position: absolute; z-index: 1; display: flex; flex-direction: column; gap: .3rem; }
   #opts:empty, main[data-result] ~ #opts { display: none; }
-  #choices button, #opts button {
+  #choices button, #opts button, #claims button {
     font: 1.15rem var(--display);
     color: inherit;
     background: none;
@@ -167,9 +167,20 @@
     padding: .25rem .95rem;
     cursor: pointer;
   }
-  #choices [aria-pressed="true"], #opts [aria-pressed="true"] { border-color: var(--focus); color: var(--focus); }
+  #choices [aria-pressed="true"], #opts [aria-pressed="true"], #claims [aria-pressed="true"] { border-color: var(--focus); color: var(--focus); }
   #opts button { padding: .2rem .8rem; text-align: left; white-space: nowrap; background: color-mix(in srgb, var(--focus) 18%, var(--paper)); border-color: color-mix(in srgb, var(--focus) 45%, var(--paper)); } /* 下の文の上に重なるので、地と違う色で塗りつぶす */
   #choices .answer { border-color: var(--ok); color: var(--ok); }
+
+  /* 内容一致の文。文が短ければ ○ × を同じ行の右に、入らなければ次の行の右に置く */
+  #claims { list-style: none; margin: 1.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .9rem; font: 500 1.2rem/1.6 var(--display); }
+  #claims:empty { display: none; }
+  #claims li { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .8rem; }
+  #claims li > :first-child { flex: 1 1 15rem; }
+  .ox { display: flex; gap: .4rem; margin-left: auto; }
+  #claims button { font-family: var(--body); min-width: 3.2rem; }
+  #claims [aria-pressed="true"] { background: color-mix(in srgb, currentColor 12%, transparent); }
+  #claims .answer, #claims [data-r="correct"] [aria-pressed="true"] { border-color: var(--ok); color: var(--ok); }
+  #claims [data-r="wrong"] [aria-pressed="true"] { border-color: var(--ng); color: var(--ng); text-decoration: line-through; }
 
   #result { font-weight: 600; }
   [data-result="correct"] #result { color: var(--ok); }
@@ -249,6 +260,7 @@
   /* マウスで押せるものに乗ったら少し濃くする。押せないもの (答えたあとの語群、無効のボタン) と選択中のものは変えない */
   @media (hover: hover) {
     main:not([data-result]) #choices button:not([aria-pressed="true"]):hover,
+    main:not([data-result]) #claims li:not([data-r]) button:not([aria-pressed="true"]):hover,
     footer button:not(:disabled):hover { border-color: var(--ink-soft); }
     .close:hover, .seg button:not([aria-pressed="true"]):hover { color: var(--ink); }
     #actions > button:not(:disabled):hover { opacity: .85; }
@@ -272,6 +284,7 @@
     <p id="a-line" class="line"><b class="tag">A</b><span id="a"></span></p>
     <form id="form">
       <p id="passage" hidden></p>
+      <ol id="claims"></ol>
       <p id="b-line" class="line"><b id="tag-b" class="tag">B</b><span><span id="before"></span><span class="paren">(</span><input id="answer" lang="fr" aria-label="答え" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span id="fix"></span><span class="paren">)</span><span id="after"></span></span></p>
     </form>
   </div>

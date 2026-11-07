@@ -36,7 +36,8 @@ export function instantiate(q, pools, rand = Math.random) {
     }
   }
   const sub = (s, lang) => s?.replace(/\{(\w+)(?:\.(\w+))?\}/g, (_, k, f) => (f ? v[k][f] : v[k][lang] ?? v[k]));
-  return { ...q, text: sub(q.text, "fr"), a: sub(q.a, "fr"), hint: sub(q.hint, "ja"), ja: sub(q.ja, "ja") };
+  return { ...q, text: sub(q.text, "fr"), a: sub(q.a, "fr"), hint: sub(q.hint, "ja"), ja: sub(q.ja, "ja"),
+    claims: q.claims?.map(([s, ok]) => [sub(s, "fr"), ok]) };
 }
 
 // 採点。字まで全部合えば correct、大文字小文字だけ違えば case、アクサン (と合字 œ æ) も違えば accent、それ以外は wrong。

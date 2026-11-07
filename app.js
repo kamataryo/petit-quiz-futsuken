@@ -36,15 +36,20 @@ const KEY = "petit-quiz-futsuken";
 const state = { results: {}, mode: "all" };
 try { Object.assign(state, JSON.parse(localStorage.getItem(KEY))); } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
-// 長文は空欄ごとに `${id}-${番号}` で記録し、成績でも空欄を1問と数える
-const ids = (x) => x.blanks?.map((_, i) => `${x.id}-${i + 1}`) ?? [x.id];
+// 長文は空欄ごと (内容一致は文ごと) に `${id}-${番号}` で記録し、成績でも1つを1問と数える
+const ids = (x) => (x.blanks ?? x.claims)?.map((_, i) => `${x.id}-${i + 1}`) ?? [x.id];
 const isMissed = (id) => ![undefined, "correct"].includes(state.results[id]);
 
 let deck = [];
 let q;
 
-// 回答するは (長文なら全部の空欄に) 1文字入るまで押せない。既定の送信ボタンが disabled だと Enter でもフォームは送られないので、空のまま採点されることはない
-const sync = () => { $("submit").disabled = (q.blanks ? blanks() : [input]).some((b) => !b.value.trim()); };
+// 回答するは (長文なら全部の空欄に) 1文字入るまで押せない。既定の送信ボタンが disabled だと Enter でもフォームは送られないので、空のまま採点されることはない。
+// 内容一致は全部の文に ○ か × を選ぶまで
+const sync = () => {
+  $("submit").disabled = q.claims
+    ? [...$("claims").children].some((li) => !li.querySelector("[aria-pressed=true]"))
+    : (q.blanks ? blanks() : [input]).some((b) => !b.value.trim());
+};
 $("form").addEventListener("input", sync);
 
 function render() {
@@ -78,7 +83,7 @@ function next() {
   $("done").hidden = !none || state.mode !== "all";
   render();
   if (none) return;
-  // 長文は残っている空欄の数だけ (1〜5 倍) 先に出やすくする。1問1答は重み 1
+  // 長文は残っている空欄 (内容一致は文) の数だけ (1〜6 倍) 先に出やすくする。1問1答は重み 1
   if (!deck.length) deck = shuffle(pool.filter(isLeft), (x) => ids(x).filter(left).length);
   q = instantiate(deck.pop(), pools); // 人名や数をここで埋める。id はそのまま
   const { label, choices: n } = types[q.type];
@@ -100,10 +105,23 @@ function next() {
   input.readOnly = false;
   // 長文は空欄ごとに入力欄を置く。候補はフォーカスした空欄の下に出す (下の focusin)。
   // 前に正解した空欄は答えを埋めて閉じておく (復習モードで、間違えた空欄だけ解き直す)
-  $("b-line").hidden = !!q.blanks;
-  $("passage").hidden = !q.blanks;
+  const long = !!(q.blanks || q.claims);
+  $("b-line").hidden = long;
+  $("passage").hidden = !long;
   $("opts").replaceChildren();
-  if (q.blanks) {
+  // 内容一致は文章の下に (1)〜(6) を並べ、それぞれ ○ か × を押す。前に正解した文は答えを選んで閉じておく
+  $("claims").replaceChildren(...(q.claims ?? []).map(([s, ok], i) => {
+    const ox = span("ox", "");
+    ox.append(...["○", "×"].map((m) => Object.assign(document.createElement("button"), { type: "button", textContent: m, ariaPressed: "false" })));
+    const li = document.createElement("li");
+    li.append(span("", nb(`(${i + 1}) ${s}`)), ox);
+    if (state.results[`${q.id}-${i + 1}`] === "correct") {
+      li.dataset.r = "correct";
+      ox.children[ok ? 0 : 1].ariaPressed = "true";
+    }
+    return li;
+  }));
+  if (long) {
     let i = 0; // 通しの空欄番号
     const blank = () => {
       const opts = q.blanks[i++];
@@ -134,7 +152,7 @@ function next() {
   // 次の問題はいちばん上から見せる (長文を解いたあとは下まで送っていて、頭が見切れる)。スクロールの動きはつけず一気に
   scrollTo({ top: 0, behavior: "instant" });
   // 長文は出したときにはフォーカスしない。iOS は入力欄にフォーカスすると拡大するので、まず全体を読めるように
-  if (q.blanks) document.activeElement.blur();
+  if (long) document.activeElement.blur();
   else focus();
   // 問題が変わったのがわかるように、ふわっと出す
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
@@ -183,6 +201,14 @@ $("opts").onclick = (e) => {
   focus(blanks().find((b) => !b.readOnly && !b.value) ?? cur);
 };
 
+// 内容一致の ○ ×。文ごとにどちらか1つ
+$("claims").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (!b || answered() || b.closest("li").dataset.r) return;
+  for (const x of b.parentNode.children) x.ariaPressed = String(x === b);
+  sync();
+};
+
 // 形を変えて書く問題 (cue があるもの: 動詞の活用、à → au など) は placeholder に薄く入れるだけで、書くのは自分。
 // 語群の語をそのまま書く問題は答えを埋める
 $("choices").onclick = (e) => {
@@ -199,25 +225,34 @@ $("choices").onclick = (e) => {
 // 答える前なら問題のあたりのどこをタップしても入力欄に付け直す。PC ではクリックで文字を選べなくなるので、指で触る画面だけ。
 // 長文は空欄が複数あるので、どこに付けるかは決めない
 main.addEventListener("click", (e) => {
-  if (matchMedia("(pointer: coarse)").matches && !answered() && !q.blanks && !e.target.closest("button, input")) focus();
+  if (matchMedia("(pointer: coarse)").matches && !answered() && !q.blanks && !q.claims && !e.target.closest("button, input")) focus();
 });
 
 // Enter 1回目で採点、2回目で次へ
 $("form").onsubmit = (e) => {
   e.preventDefault();
   if (answered()) return next();
-  if (q.blanks) {
-    // 空欄ごとに採点して記録する。前に正解して埋めてある空欄 (readOnly) はそのまま
+  if (q.blanks || q.claims) {
+    // 空欄 (内容一致は文) ごとに採点して記録する。前に正解したもの (readOnly の空欄、data-r のある文) はそのまま
     const n = { correct: 0, partial: 0, wrong: 0 };
-    blanks().forEach((b, i) => {
-      if (b.readOnly) return;
-      const ans = q.blanks[i][0];
-      const r = grade(b.value, [ans]);
-      state.results[`${q.id}-${i + 1}`] = r;
-      n[(b.dataset.r = bucket(r))]++;
-      if (r !== "correct") b.after(span("fix", ans));
-      b.readOnly = true;
-    });
+    const put = (i, el, r) => { state.results[`${q.id}-${i + 1}`] = r; n[(el.dataset.r = bucket(r))]++; };
+    if (q.blanks) {
+      blanks().forEach((b, i) => {
+        if (b.readOnly) return;
+        const ans = q.blanks[i][0];
+        const r = grade(b.value, [ans]);
+        put(i, b, r);
+        if (r !== "correct") b.after(span("fix", ans));
+        b.readOnly = true;
+      });
+    } else {
+      [...$("claims").children].forEach((li, i) => {
+        const [o, x] = li.querySelectorAll("button");
+        const ok = q.claims[i][1];
+        (ok ? o : x).classList.add("answer");
+        if (!li.dataset.r) put(i, li, (o.ariaPressed === "true") === ok ? "correct" : "wrong");
+      });
+    }
     main.dataset.result = n.wrong ? "wrong" : n.partial ? "partial" : "correct";
     $("result").textContent = Object.entries(n).map(([k, c]) => `${MARK[k]} ${c}`).join("　");
   } else {
@@ -245,10 +280,11 @@ $("form").onsubmit = (e) => {
   if (over > 0) scrollBy(0, Math.min(over, $("result").getBoundingClientRect().top - vv.offsetTop));
 };
 
-// 答え合わせのあと入力欄の外をクリックしていても、Enter で次へ進む。ボタンの上の Enter はそのボタンを押す (アクサンの入力方法など)
+// 答え合わせのあと入力欄の外をクリックしていても、Enter で次へ進む。ボタンの上の Enter はそのボタンを押す (アクサンの入力方法など)。
+// ただし内容一致の ○ × は答えたあとは押せないので、フォーカスが残っていても次へ進む (Chrome は押したボタンにフォーカスが残る)
 document.addEventListener("keydown", (e) => {
   if ($("keys").open) return;
-  if (e.key === "Enter" && answered() && !e.target.closest("button, input")) { e.preventDefault(); next(); }
+  if (e.key === "Enter" && answered() && (!e.target.closest("button, input") || e.target.closest("#claims"))) { e.preventDefault(); next(); }
 });
 
 // アクサン入力の早見表。開いたときは OS に合わせ、中の切り替えで Mac / Windows を見比べられる

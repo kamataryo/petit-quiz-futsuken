@@ -1,11 +1,7 @@
-export const shuffle = (a) => {
-  a = [...a];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-};
+// 切り混ぜる。w(x) を渡すと重み付きになり、末尾から取っていくと、残りの中で次に出る確率が w に比例する。
+// 要素ごとに random ** (1 / w) を引いて並べる (Efraimidis–Spirakis の方法)。w がなければふつうの切り混ぜ
+export const shuffle = (a, w = () => 1) =>
+  a.map((x) => [Math.random() ** (1 / w(x)), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
 
 // 語群に並べる形。verb は不定詞 (cue)、ほかは先頭の正解
 export const choiceOf = (q) => (q.cue ?? q.answers[0]).toLowerCase();

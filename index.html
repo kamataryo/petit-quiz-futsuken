@@ -120,8 +120,14 @@
   .tag { font: 600 .5em var(--body); color: var(--ink-soft); }
   .paren { color: var(--ink-soft); }
 
+  /* 長文。空欄は #answer と同じ見た目で、採点したら空欄ごとに色を付ける */
+  #passage { margin: 0; font: 500 1.05rem/2 var(--display); white-space: pre-line; }
+  #passage [data-r="correct"] { color: var(--ok); border-color: var(--ok); }
+  #passage [data-r="partial"] { color: var(--part); border-color: var(--part); }
+  #passage [data-r="wrong"] { color: var(--ng); border-color: var(--ng); text-decoration: line-through; }
+
   /* かっこの中に直接書く。幅は中身に合わせて伸びる (未対応のブラウザは固定幅) */
-  #answer {
+  #answer, #passage input {
     field-sizing: content;
     min-width: 3em;
     max-width: calc(100% - .3em); /* 長く打っても行からはみ出さず、欄の中で流れる。.3em は左右の margin */
@@ -135,15 +141,15 @@
     border-radius: 0;
     outline: none;
   }
-  @supports not (field-sizing: content) { #answer { width: 6em; } }
-  #answer:focus { border-color: var(--focus); }
+  @supports not (field-sizing: content) { #answer, #passage input { width: 6em; } }
+  #answer:focus, #passage input:focus { border-color: var(--focus); }
   /* 頭文字のヒントは答えに要る情報なので、大きい文字で 3:1 を下回らない濃さにする */
-  #answer::placeholder { color: var(--ink-soft); opacity: .8; }
+  #answer::placeholder, #passage input::placeholder { color: var(--ink-soft); opacity: .8; }
   [data-result="correct"] #answer { color: var(--ok); border-color: var(--ok); }
   [data-result="partial"] #answer { color: var(--part); border-color: var(--part); }
   [data-result="wrong"] #answer { color: var(--ng); border-color: var(--ng); text-decoration: line-through; }
-  #fix { color: var(--ok); }
-  #fix:not(:empty) { margin-right: .15em; }
+  #fix, .fix { color: var(--ok); }
+  #fix:not(:empty), .fix { margin-right: .15em; }
 
   #choices { display: flex; flex-wrap: wrap; gap: .5rem; }
   #choices button {
@@ -163,6 +169,7 @@
   [data-result="partial"] #result { color: var(--part); }
   [data-result="wrong"] #result { color: var(--ng); }
   #ja, #note { color: var(--ink-soft); line-height: 1.7; }
+  #hint, #ja, #note { white-space: pre-line; } /* 長文の注・全訳・解説は改行で区切る */
 
   #empty, #done { width: 100%; max-width: 44rem; margin: 3rem auto 0; text-align: center; font-size: 1.2rem; }
   #empty small, #done small { display: block; margin-top: .6rem; font-size: .8rem; color: var(--ink-soft); }
@@ -255,7 +262,8 @@
   <div id="sentences" lang="fr">
     <p id="a-line" class="line"><b class="tag">A</b><span id="a"></span></p>
     <form id="form">
-      <p class="line"><b id="tag-b" class="tag">B</b><span><span id="before"></span><span class="paren">(</span><input id="answer" lang="fr" aria-label="答え" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span id="fix"></span><span class="paren">)</span><span id="after"></span></span></p>
+      <p id="passage" hidden></p>
+      <p id="b-line" class="line"><b id="tag-b" class="tag">B</b><span><span id="before"></span><span class="paren">(</span><input id="answer" lang="fr" aria-label="答え" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span id="fix"></span><span class="paren">)</span><span id="after"></span></span></p>
     </form>
   </div>
   <!-- 判定と解説は文のすぐ下に出す。語群の下だとスマホでは画面の外になる -->

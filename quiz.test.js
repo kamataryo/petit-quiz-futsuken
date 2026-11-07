@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { atHead, choiceOf, choices, grade, instantiate, variants } from "./quiz.js";
+import { atHead, choiceOf, choices, grade, instantiate, shuffle, variants } from "./quiz.js";
 
 test("アクサンまで合えば正解、アクサンだけ違えば部分正解", () => {
   assert.equal(grade("à", ["à"]), "correct");
@@ -36,8 +36,8 @@ const forms = questions.flatMap(variants); // alts も1問ずつ見る
 test("シードの問題が出題できる形になっている", () => {
   for (const q of forms) {
     assert.ok(levels[q.level] && types[q.type], q.text);
-    assert.equal(q.text.split("___").length, 2, q.text);
-    assert.ok(q.answers.length && (q.hint || q.ja || q.a), q.text);
+    assert.equal(q.text.split("___").length, (q.blanks?.length ?? 1) + 1, q.text);
+    assert.ok((q.answers ?? q.blanks).length && (q.hint || q.ja || q.a), q.text);
     if (q.type === "word") assert.ok(q.answers.every((a) => a.startsWith(q.cue)), q.text);
     if (q.type === "verb") assert.ok(q.cue && q.a, q.text);
     // 語群のある問題の cue は「形を変えて書く」印。そのままの形が答えなら cue は要らない
@@ -92,14 +92,16 @@ test("シードの {名前} はすべて vars で埋まり、埋めても同じ�
     const used = [q.text, q.a, q.hint, q.ja].join(" ").match(/(?<=\{)\w+/g) ?? [];
     for (const k of used) assert.ok(q.vars?.[k], `${q.id} ${k}`);
     for (const spec of Object.values(q.vars ?? {})) assert.ok(typeof spec !== "string" || pools[spec], q.id);
-    assert.ok(!q.answers.join().includes("{"), q.id); // 語群はほかの問題の answers から作るので、答えには入れない
+    assert.ok(!(q.answers ?? q.blanks.flat()).join().includes("{"), q.id); // 語群はほかの問題の answers から作るので、答えには入れない
     for (let i = 0; i < 20; i++) {
       const x = instantiate(q, pools);
       assert.equal(x.id, q.id);
       // 欄の書き忘れは undefined、{名前.欄} の欄がない要素は [object Object] になって出る
       assert.ok(!/[{}]|undefined|\[object/.test([x.text, x.a, x.hint, x.ja].join(" ")), `${q.id} ${x.text}`);
       // 母音の前のエリジョン漏れ (de apprendre など)。答えは固定でも、vars で入る語が母音で始まると起きる
-      const fr = [x.text.replace("___", x.answers[0]), x.a].join(" ");
+      const ans = x.answers ?? x.blanks.map((b) => b[0]);
+      let k = 0;
+      const fr = [x.text.replace(/___/g, () => ans[k++]), x.a].join(" ");
       assert.ok(!/(?<!\p{L})(de|que|le|la|je|ne|se|me|te|ce|jusque) [aeiouâàéèêîôûœ]/iu.test(fr), `${q.id} ${fr}`);
     }
   }
@@ -113,6 +115,25 @@ test("alts で文を変えたら、訳も書き直す", () => {
 
 test("文頭の空欄の答えは大文字で、それ以外は小文字で始まる", () => {
   for (const q of forms) {
-    for (const a of q.answers) assert.equal(a[0] === a[0].toUpperCase(), atHead(q.text), `${q.id} ${a}`);
+    for (const a of q.answers ?? []) assert.equal(a[0] === a[0].toUpperCase(), atHead(q.text), `${q.id} ${a}`);
   }
+});
+
+test("長文は空欄が5つで、それぞれ別々の候補が3つ (先頭が正解)。文頭の空欄 (会話は話し手の名前のあとも) は候補を大文字で始める", () => {
+  for (const q of forms.filter((x) => x.blanks)) {
+    const parts = q.text.split("___");
+    assert.equal(q.blanks.length, 5, q.id);
+    q.blanks.forEach((b, i) => {
+      assert.equal(new Set(b).size, 3, `${q.id} ${b}`);
+      const head = /(^|\n|[.!?]\s|\} : )$/.test(parts[i]);
+      for (const w of b) assert.equal(w[0] === w[0].toUpperCase(), head, `${q.id} ${w}`);
+    });
+  }
+});
+
+test("重み付きの切り混ぜは、末尾 (次に出る問題) に重みの比で来る", () => {
+  let n = 0;
+  for (let i = 0; i < 6000; i++) if (shuffle(["a", "b"], (x) => (x === "a" ? 5 : 1)).at(-1) === "a") n++;
+  assert.ok(Math.abs(n / 6000 - 5 / 6) < 0.05, String(n / 6000)); // 5 : 1 なら 5/6
+  assert.deepEqual(shuffle([1, 2, 3]).sort(), [1, 2, 3]);
 });

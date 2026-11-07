@@ -93,25 +93,23 @@ function next() {
   input.value = "";
   input.placeholder = n ? "" : q.cue ?? "";
   input.readOnly = false;
-  // 長文は空欄ごとに datalist つきの入力欄 (候補から選ぶことも書くこともできる) を置く。候補はアルファベット順。
+  // 長文は空欄ごとに入力欄を置く。候補はフォーカスした空欄のものを下のボタンの上に出す (showOpts)。
   // 前に正解した空欄は答えを埋めて閉じておく (復習モードで、間違えた空欄だけ解き直す)
   $("b-line").hidden = !!q.blanks;
   $("passage").hidden = !q.blanks;
+  $("opts").replaceChildren();
   if (q.blanks) {
     const parts = nb(q.text).split("___");
     $("passage").replaceChildren(parts[0], ...q.blanks.flatMap((opts, i) => {
       const b = Object.assign(document.createElement("input"), { placeholder: i + 1, ariaLabel: `空欄 ${i + 1}`, autocomplete: "off",
         spellcheck: false, enterKeyHint: "go", autocapitalize: /^\p{Lu}/u.test(opts[0]) ? "sentences" : "off" });
       b.setAttribute("autocorrect", "off");
-      b.setAttribute("list", `opts-${i}`);
       if (state.results[`${q.id}-${i + 1}`] === "correct") {
         b.value = opts[0];
         b.readOnly = true;
         b.dataset.r = "correct";
       }
-      const list = Object.assign(document.createElement("datalist"), { id: `opts-${i}` });
-      list.append(...opts.toSorted((x, y) => x.localeCompare(y, "fr")).map((o) => new Option(o)));
-      return [span("paren", "("), b, span("paren", ")"), list, parts[i + 1]];
+      return [span("paren", "("), b, span("paren", ")"), parts[i + 1]];
     }));
   }
   sync();
@@ -125,6 +123,23 @@ function next() {
 $("form").addEventListener("touchstart", (e) => {
   if (e.target.matches("input") && innerHeight - vv.height < 100) e.target.blur();
 });
+
+// 長文の候補。datalist は iOS だとキーボードの予測欄に1つ出るだけなので、フォーカスした空欄の候補 (アルファベット順) を
+// キーボードの上に持ち上げてある #actions に並べる。押すと入れて、まだ空いている次の空欄へ移る
+let cur;
+$("passage").addEventListener("focusin", ({ target: b }) => {
+  cur = b;
+  const opts = b.readOnly ? [] : q.blanks[blanks().indexOf(b)].toSorted((x, y) => x.localeCompare(y, "fr"));
+  $("opts").replaceChildren(...opts.map((o) => Object.assign(document.createElement("button"), { textContent: o, ariaPressed: String(o === b.value) })));
+});
+$("opts").onclick = (e) => {
+  const o = e.target.closest("button");
+  if (!o || answered()) return;
+  cur.value = o.textContent;
+  for (const x of $("opts").children) x.ariaPressed = String(x === o);
+  sync();
+  focus(blanks().find((b) => !b.readOnly && !b.value) ?? cur);
+};
 
 // 形を変えて書く問題 (cue があるもの: 動詞の活用、à → au など) は placeholder に薄く入れるだけで、書くのは自分。
 // 語群の語をそのまま書く問題は答えを埋める

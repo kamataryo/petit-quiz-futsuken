@@ -151,8 +151,10 @@
   #fix, .fix { color: var(--ok); }
   #fix:not(:empty), .fix { margin-right: .15em; }
 
-  #choices { display: flex; flex-wrap: wrap; gap: .5rem; }
-  #choices button {
+  #choices, #opts { display: flex; flex-wrap: wrap; gap: .5rem; }
+  #opts { max-width: 44rem; margin: 0 auto .6rem; }
+  #opts:empty { display: none; }
+  #choices button, #opts button {
     font: 1.15rem var(--display);
     color: inherit;
     background: none;
@@ -161,7 +163,8 @@
     padding: .25rem .95rem;
     cursor: pointer;
   }
-  #choices [aria-pressed="true"] { border-color: var(--focus); color: var(--focus); }
+  #choices [aria-pressed="true"], #opts [aria-pressed="true"] { border-color: var(--focus); color: var(--focus); }
+  #opts button { font-size: 1rem; padding: .2rem .8rem; }
   #choices .answer { border-color: var(--ok); color: var(--ok); }
 
   #result { font-weight: 600; }
@@ -190,10 +193,10 @@
   /* Enter の代わりのボタン。画面の下端に固定し、キーボードが出たら app.js でその上まで持ち上げる。
      答え合わせの前は「回答する」、あとは「次にすすむ」だけを出す */
   #actions { position: fixed; left: 0; right: 0; bottom: 0; padding: .6rem 1rem; background: var(--paper); border-top: 1px solid var(--rule); }
-  #actions button { display: block; width: 100%; max-width: 44rem; margin: 0 auto; padding: .7rem; font: 600 1rem var(--body); color: var(--paper); background: var(--ink); border: 0; border-radius: .5rem; cursor: pointer; }
-  main[data-result] ~ #actions #submit, main:not([data-result]) ~ #actions #next, main[hidden] ~ #actions { display: none; }
+  #actions > button { display: block; width: 100%; max-width: 44rem; margin: 0 auto; padding: .7rem; font: 600 1rem var(--body); color: var(--paper); background: var(--ink); border: 0; border-radius: .5rem; cursor: pointer; }
+  main[data-result] ~ #actions #submit, main[data-result] ~ #actions #opts, main:not([data-result]) ~ #actions #next, main[hidden] ~ #actions { display: none; }
   /* 押せないときはタップを下の #actions に通す。そこで mousedown を止めているので、入力欄からフォーカスが外れずキーボードも閉じない */
-  #actions button:disabled { opacity: .4; cursor: default; pointer-events: none; }
+  #actions > button:disabled { opacity: .4; cursor: default; pointer-events: none; }
 
   /* アクサン入力の早見表。data-os に合わせて片方の section だけ見せる */
   #keys {
@@ -242,7 +245,7 @@
     main:not([data-result]) #choices button:not([aria-pressed="true"]):hover,
     footer button:not(:disabled):hover { border-color: var(--ink-soft); }
     .close:hover, .seg button:not([aria-pressed="true"]):hover { color: var(--ink); }
-    #actions button:not(:disabled):hover { opacity: .85; }
+    #actions > button:not(:disabled):hover { opacity: .85; }
   }
 </style>
 
@@ -275,6 +278,7 @@
 <p id="empty" hidden>間違えた問題はありません。<small>「全問から出題する」で全問にもどれます。</small></p>
 <p id="done" hidden>全問解き終わりました。<small>「間違えた問題だけ解く」で復習するか、「記録をリセット」で最初から解き直せます。</small></p>
 <div id="actions">
+  <div id="opts" lang="fr"></div>
   <button id="submit" form="form">回答する</button>
   <button id="next" form="form">次にすすむ</button>
 </div>

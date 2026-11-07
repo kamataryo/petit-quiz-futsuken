@@ -59,7 +59,7 @@ function render() {
   const missed = n.partial + n.wrong;
   $("mode").textContent = state.mode === "missed"
     ? `全問から出題する（復習のこり ${missed} 問）`
-    : `間違えた問題だけ解く（${missed} 問）`;
+    : `間違えた問題のみ（${missed} 問）`;
   $("mode").disabled = state.mode === "all" && !missed;
   document.body.dataset.mode = state.mode;
 }
@@ -157,6 +157,7 @@ const place = () => {
   const below = r.bottom + 4 + o.offsetHeight <= vv.offsetTop + vv.height - $("actions").offsetHeight;
   o.style.top = `${scrollY + (below ? r.bottom + 4 : r.top - 4 - o.offsetHeight)}px`;
   o.style.left = `${Math.max(vv.pageLeft + 4, Math.min(scrollX + r.left, vv.pageLeft + vv.width - 4 - o.offsetWidth))}px`;
+  return below;
 };
 vv.addEventListener("resize", place);
 vv.addEventListener("scroll", place);
@@ -165,7 +166,11 @@ $("passage").addEventListener("focusin", ({ target: b }) => {
   if (b.readOnly || answered()) return;
   const opts = q.blanks[blanks().indexOf(b)].toSorted((x, y) => x.localeCompare(y, "fr"));
   $("opts").replaceChildren(...opts.map((o) => Object.assign(document.createElement("button"), { textContent: o, ariaPressed: String(o === b.value) })));
-  place();
+  // 空欄の側から広げる (下に出すときは上から下へ、上に出すときは下から上へ)
+  const below = place();
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+    $("opts").animate({ clipPath: [below ? "inset(0 0 100% 0)" : "inset(100% 0 0 0)", "inset(0)"], translate: [`0 ${below ? -6 : 6}px`, "0"] },
+      { duration: 200, easing: "ease-out" });
 });
 $("passage").addEventListener("focusout", () => $("opts").replaceChildren());
 $("opts").onmousedown = (e) => e.preventDefault();

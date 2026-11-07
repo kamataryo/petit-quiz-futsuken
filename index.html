@@ -144,6 +144,8 @@
     border-radius: 0;
     outline: none;
   }
+  /* 書き終えた欄は、フォーカスを外したら (答えたあとも) 中身の幅まで縮める。書いている間と空の欄は min-width を残す */
+  #answer.filled:is(:not(:focus), :read-only), #passage input.filled:is(:not(:focus), :read-only) { min-width: 0; }
   @supports not (field-sizing: content) { #answer, #passage input { width: 6em; } }
   #answer:focus, #passage input:focus { border-color: var(--focus); }
   /* 頭文字のヒントは答えに要る情報なので、大きい文字で 3:1 を下回らない濃さにする */

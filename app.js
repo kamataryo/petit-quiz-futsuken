@@ -46,6 +46,8 @@ let q;
 // 回答するは (長文なら全部の空欄に) 1文字入るまで押せない。既定の送信ボタンが disabled だと Enter でもフォームは送られないので、空のまま採点されることはない。
 // 内容一致は全部の文に ○ か × を選ぶまで
 const sync = () => {
+  // 書いた欄に印を付ける。CSS はフォーカスを外れた欄を中身の幅まで縮める
+  for (const b of [input, ...blanks()]) b.classList.toggle("filled", !!b.value.trim());
   $("submit").disabled = q.claims
     ? [...$("claims").children].some((li) => !li.querySelector("[aria-pressed=true]"))
     : (q.blanks ? blanks() : [input]).some((b) => !b.value.trim());

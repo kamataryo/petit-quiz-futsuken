@@ -193,6 +193,8 @@
   }
   footer button:disabled { opacity: .4; cursor: default; }
   #reset { margin-left: auto; color: var(--ink-soft); }
+  /* アクサンの早見表は PC のキーボードの打ち方なので、指で触る画面 (iPhone など) では出さない */
+  @media (pointer: coarse) { #open-keys { display: none; } }
 
   /* Enter の代わりのボタン。画面の下端に固定し、キーボードが出たら app.js でその上まで持ち上げる。
      答え合わせの前は「回答する」、あとは「次にすすむ」だけを出す */

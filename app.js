@@ -171,38 +171,34 @@ $("form").addEventListener("touchstart", (e) => {
   if (e.target.matches("input") && innerHeight - vv.height < 100) e.target.blur();
 });
 
-// 長文の候補。datalist は iOS だとキーボードの予測欄に1つ出るだけなので、フォーカスした空欄のすぐ下に候補 (アルファベット順) を縦に並べる。
-// 見えている範囲 (iOS がフォーカスで拡大したあとも) からはみ出さないよう左右を寄せ、下に入らなければ空欄の上に出す。
-// 押すと入れて、まだ空いている次の空欄へ移る。押してもフォーカスは空欄に残す (キーボードを閉じない)
+// 長文の候補。datalist は iOS だとキーボードの予測欄に1つ出るだけなので、フォーカスした空欄の候補 (アルファベット順) に 1. 2. 3. と番号を振って下端の #actions に並べる。
+// 空欄の下に重ねると続きの文が隠れて、文脈から選べなくなる。候補の分だけ #actions が高くなるので、空欄が隠れたら見えるところまで送る。
+// 押すと入れて、まだ空いている次の空欄へ移る。押してもフォーカスは空欄に残す (#actions の mousedown を止めているので、キーボードを閉じない)
 let cur;
-const place = () => {
-  const o = $("opts");
-  if (!o.childElementCount) return;
-  const r = cur.getBoundingClientRect(); // layout viewport が基準。vv.offsetTop / pageLeft と合わせて見えている範囲を出す
-  const below = r.bottom + 4 + o.offsetHeight <= vv.offsetTop + vv.height - $("actions").offsetHeight;
-  o.style.top = `${scrollY + (below ? r.bottom + 4 : r.top - 4 - o.offsetHeight)}px`;
-  o.style.left = `${Math.max(vv.pageLeft + 4, Math.min(scrollX + r.left, vv.pageLeft + vv.width - 4 - o.offsetWidth))}px`;
-  return below;
+const reveal = () => {
+  if (!$("opts").childElementCount) return;
+  const over = cur.getBoundingClientRect().bottom + 8 - (vv.offsetTop + vv.height - $("actions").offsetHeight);
+  if (over > 0) scrollBy(0, over);
 };
-vv.addEventListener("resize", place);
-vv.addEventListener("scroll", place);
+vv.addEventListener("resize", reveal); // キーボードが出きったあと
+// 候補が出ると #actions が高くなる。下の余白も合わせて、フッターが隠れたままにならないようにする
+new ResizeObserver(() => { document.body.style.paddingBottom = `${$("actions").offsetHeight + 16}px`; }).observe($("actions"));
 $("passage").addEventListener("focusin", ({ target: b }) => {
   cur = b;
   if (b.readOnly || answered()) return;
   const opts = q.blanks[blanks().indexOf(b)].toSorted((x, y) => x.localeCompare(y, "fr"));
-  $("opts").replaceChildren(...opts.map((o) => Object.assign(document.createElement("button"), { textContent: o, ariaPressed: String(o === b.value) })));
-  // 空欄の側から広げる (下に出すときは上から下へ、上に出すときは下から上へ)
-  const below = place();
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
-    $("opts").animate({ clipPath: [below ? "inset(0 0 100% 0)" : "inset(100% 0 0 0)", "inset(0)"], translate: [`0 ${below ? -6 : 6}px`, "0"] },
-      { duration: 200, easing: "ease-out" });
+  $("opts").replaceChildren(...opts.map((o, i) => {
+    const btn = Object.assign(document.createElement("button"), { type: "button", value: o, ariaPressed: String(o === b.value) });
+    btn.append(Object.assign(document.createElement("b"), { textContent: `${i + 1}.` }), o); // 番号は見せるだけ。入れるのは value
+    return btn;
+  }));
+  reveal();
 });
 $("passage").addEventListener("focusout", () => $("opts").replaceChildren());
-$("opts").onmousedown = (e) => e.preventDefault();
 $("opts").onclick = (e) => {
   const o = e.target.closest("button");
   if (!o || answered()) return;
-  cur.value = o.textContent;
+  cur.value = o.value;
   for (const x of $("opts").children) x.ariaPressed = String(x === o);
   sync();
   focus(blanks().find((b) => !b.readOnly && !b.value) ?? cur);

@@ -36,7 +36,6 @@ const forms = questions.flatMap(variants); // alts も1問ずつ見る
 test("シードの問題が出題できる形になっている", () => {
   for (const q of forms) {
     assert.ok(levels[q.level] && types[q.type], q.text);
-    assert.ok(types[q.type].name, q.type); // 形式の選択に出す名前
     assert.equal(q.text.split("___").length, (q.blanks?.length ?? (q.claims ? 0 : 1)) + 1, q.text);
     assert.ok((q.answers ?? q.blanks ?? q.claims).length && (q.hint || q.ja || q.a), q.text);
     if (q.type === "word") assert.ok(q.answers.every((a) => a.startsWith(q.cue)), q.text);

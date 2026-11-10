@@ -171,6 +171,7 @@
   }
   #choices [aria-pressed="true"], #opts [aria-pressed="true"], #claims [aria-pressed="true"] { border-color: var(--focus); color: var(--focus); }
   #opts button { padding: .2rem .8rem; font-size: .9rem; text-align: left; } /* キーボードが出ていると縦が狭いので、語群より小さくする */
+  #opts button b { margin-right: .4em; font: 600 .85em var(--body); color: var(--ink-soft); font-variant-numeric: tabular-nums; } /* 候補の番号 */
   #choices .answer { border-color: var(--ok); color: var(--ok); }
 
   /* 内容一致の文。文が短ければ ○ × を同じ行の右に、入らなければ次の行の右に置く */
@@ -195,7 +196,7 @@
   #empty small, #done small { display: block; margin-top: .6rem; font-size: .8rem; color: var(--ink-soft); }
 
   footer { margin-top: auto; display: flex; flex-wrap: wrap; gap: .5rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
-  footer button, footer select {
+  footer button {
     font: 1rem var(--body);
     color: var(--ink);
     background: none;
@@ -205,7 +206,6 @@
     cursor: pointer;
   }
   footer button:disabled { opacity: .4; cursor: default; }
-  footer select { min-width: 0; max-width: 100%; }
   #reset { margin-left: auto; color: var(--ink-soft); }
 
   /* Enter の代わりのボタン。画面の下端に固定し、キーボードが出たら app.js でその上まで持ち上げる。
@@ -221,7 +221,7 @@
   @media (hover: hover) {
     main:not([data-result]) #choices button:not([aria-pressed="true"]):hover,
     main:not([data-result]) #claims li:not([data-r]) button:not([aria-pressed="true"]):hover,
-    footer button:not(:disabled):hover, footer select:hover { border-color: var(--ink-soft); }
+    footer button:not(:disabled):hover { border-color: var(--ink-soft); }
     #actions > button:not(:disabled):hover { opacity: .85; }
   }
 </style>
@@ -254,14 +254,13 @@
   <div id="choices" lang="fr"></div>
 </main>
 <p id="empty" hidden>間違えた問題はありません。<small>「全問から出題する」で全問にもどれます。</small></p>
-<p id="done" hidden><span id="done-what">全問</span>解き終わりました。<small>「間違えた問題のみ」で復習するか、「記録をリセット」で最初から解き直せます。</small></p>
+<p id="done" hidden>全問解き終わりました。<small>「間違えた問題のみ」で復習するか、「記録をリセット」で最初から解き直せます。</small></p>
 <div id="actions">
   <div id="opts" lang="fr" role="group" aria-label="空欄の候補"></div>
   <button id="submit" form="form">回答する</button>
   <button id="next" form="form">次にすすむ</button>
 </div>
 <footer>
-  <select id="filter" aria-label="出題する形式"></select>
   <button id="mode" type="button"></button>
   <button id="open-keys" type="button">アクサンの入力方法</button>
   <button id="reset" type="button">記録をリセット</button>

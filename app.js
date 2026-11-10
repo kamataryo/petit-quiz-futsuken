@@ -30,12 +30,12 @@ const nb = (s) => s?.replace(/ ([?!:;»])/g, " $1").replace(/« /g, "« ");
 
 // 級は ?level=pre2 で選ぶ。画面での切り替えはまだない
 const level = new URLSearchParams(location.search).get("level") ?? Object.keys(levels)[0];
-const inLevel = questions.filter((x) => x.level === level);
+const pool = questions.filter((x) => x.level === level);
 
 // 記録は問題ごとの最後の結果 (id → grade の結果) と出題モード (all / missed) と乱数の種。
 // 種はリセットするまで変えない。出題の順も、人名や数の入れ替えも、語群もこの種で決まり、開き直しても同じになる
 const KEY = "petit-quiz-futsuken";
-const state = { results: {}, mode: "all", filter: "all", seed: Math.random() };
+const state = { results: {}, mode: "all", seed: Math.random() };
 try { Object.assign(state, JSON.parse(localStorage.getItem(KEY))); } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
 save(); // 答える前に閉じても種が残るように
@@ -43,17 +43,6 @@ const rand = (k) => seeded(`${state.seed}-${k}`);
 // 長文は空欄ごと (内容一致は文ごと) に `${id}-${番号}` で記録し、成績でも1つを1問と数える
 const ids = (x) => (x.blanks ?? x.claims)?.map((_, i) => `${x.id}-${i + 1}`) ?? [x.id];
 const isMissed = (id) => ![undefined, "correct"].includes(state.results[id]);
-
-// 出題する形式。all (すべて) / short (1問1答だけ) / long (長文・内容一致・会話だけ) / 形式の名前 (prep など)。
-// 成績も「間違えた問題のみ」の数も、選んだ形式の中で数える
-const isLong = (x) => !!(x.blanks || x.claims);
-const FILTERS = { all: ["すべての形式", () => true], short: ["1問1答だけ", (x) => !isLong(x)], long: ["長文・会話だけ", isLong] };
-for (const t of new Set(inLevel.map((x) => x.type))) FILTERS[t] = [types[t].name, (x) => x.type === t];
-if (!FILTERS[state.filter]) state.filter = "all"; // 形式がなくなっていたら全部にもどす
-let pool;
-const applyFilter = () => { pool = inLevel.filter(FILTERS[state.filter][1]); };
-applyFilter();
-$("filter").replaceChildren(...Object.entries(FILTERS).map(([k, [name]]) => new Option(name, k, false, k === state.filter)));
 
 let deck = [];
 let q;
@@ -98,7 +87,6 @@ function next() {
   main.hidden = none;
   $("empty").hidden = !none || state.mode !== "missed";
   $("done").hidden = !none || state.mode !== "all";
-  $("done-what").textContent = state.filter === "all" ? "全問" : `「${FILTERS[state.filter][0]}」を全問`;
   render();
   if (none) return;
   // 長文は残っている空欄 (内容一致は文) の数だけ (1〜6 倍) 先に出やすくする。1問1答は重み 1
@@ -183,7 +171,7 @@ $("form").addEventListener("touchstart", (e) => {
   if (e.target.matches("input") && innerHeight - vv.height < 100) e.target.blur();
 });
 
-// 長文の候補。datalist は iOS だとキーボードの予測欄に1つ出るだけなので、フォーカスした空欄の候補 (アルファベット順) を下端の #actions に並べる。
+// 長文の候補。datalist は iOS だとキーボードの予測欄に1つ出るだけなので、フォーカスした空欄の候補 (アルファベット順) に 1. 2. 3. と番号を振って下端の #actions に並べる。
 // 空欄の下に重ねると続きの文が隠れて、文脈から選べなくなる。候補の分だけ #actions が高くなるので、空欄が隠れたら見えるところまで送る。
 // 押すと入れて、まだ空いている次の空欄へ移る。押してもフォーカスは空欄に残す (#actions の mousedown を止めているので、キーボードを閉じない)
 let cur;
@@ -199,14 +187,18 @@ $("passage").addEventListener("focusin", ({ target: b }) => {
   cur = b;
   if (b.readOnly || answered()) return;
   const opts = q.blanks[blanks().indexOf(b)].toSorted((x, y) => x.localeCompare(y, "fr"));
-  $("opts").replaceChildren(...opts.map((o) => Object.assign(document.createElement("button"), { type: "button", textContent: o, ariaPressed: String(o === b.value) })));
+  $("opts").replaceChildren(...opts.map((o, i) => {
+    const btn = Object.assign(document.createElement("button"), { type: "button", value: o, ariaPressed: String(o === b.value) });
+    btn.append(Object.assign(document.createElement("b"), { textContent: `${i + 1}.` }), o); // 番号は見せるだけ。入れるのは value
+    return btn;
+  }));
   reveal();
 });
 $("passage").addEventListener("focusout", () => $("opts").replaceChildren());
 $("opts").onclick = (e) => {
   const o = e.target.closest("button");
   if (!o || answered()) return;
-  cur.value = o.textContent;
+  cur.value = o.value;
   for (const x of $("opts").children) x.ariaPressed = String(x === o);
   sync();
   focus(blanks().find((b) => !b.readOnly && !b.value) ?? cur);
@@ -309,14 +301,6 @@ $("actions").onmousedown = (e) => e.preventDefault();
 const lift = () => { $("actions").style.transform = `translateY(${Math.min(0, vv.offsetTop + vv.height - innerHeight)}px)`; };
 vv.addEventListener("resize", lift);
 vv.addEventListener("scroll", lift);
-
-$("filter").onchange = () => {
-  state.filter = $("filter").value;
-  applyFilter();
-  deck = [];
-  save();
-  next();
-};
 
 $("mode").onclick = () => {
   state.mode = state.mode === "missed" ? "all" : "missed";

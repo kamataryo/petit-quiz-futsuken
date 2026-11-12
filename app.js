@@ -1,4 +1,4 @@
-import { atHead, choiceOf, choices, grade, instantiate, seeded, shuffle } from "./quiz.js";
+import { atHead, choiceOf, choices, diffWords, grade, instantiate, seeded, shuffle } from "./quiz.js";
 import "./keys.js";
 
 // iOS の自動の拡大 (入力欄にフォーカスしたときなど) を止める。長文の行の右が見切れ、下に固定したボタンや候補の位置もずれるため。
@@ -24,6 +24,16 @@ const blanks = () => [...$("passage").querySelectorAll("input")];
 const span = (className, textContent) => Object.assign(document.createElement("span"), { className, textContent });
 // grade の結果を3段に畳む。case (大文字小文字だけ違う) と accent (アクサンだけ違う) は部分正解
 const bucket = (r) => (r === "correct" || r === "wrong" ? r : "partial");
+// 間違えた答えは、書いた語のうち違っている語だけに色を付けて見せる (合っている語はそのまま)。input の中は一部だけ色を変えられないので、
+// 同じ見た目の span を隣に置いて input は見えなくする。input は消さない (フォーカスが外れてスマホのキーボードが閉じる)
+const showDiff = (el, ans, r) => {
+  const s = span(`diff ${r}`, "");
+  diffWords(el.value, ans).filter((w) => w.input).forEach((w, i) => {
+    s.append(i ? " " : "", w.r === "correct" ? w.input : span(w.r === "extra" ? "wrong" : "partial", w.input));
+  });
+  el.classList.add("diffed");
+  el.after(s);
+};
 const MARK = { correct: "◎", partial: "△", wrong: "×" };
 // フランス語は ? ! : ; » の前と « のあとに空白を置く。記号だけ別の行に落ちないよう、改行しない細い空白にする
 const nb = (s) => s?.replace(/ ([?!:;»])/g, " $1").replace(/« /g, "« ");
@@ -108,6 +118,8 @@ function next() {
   $("choices").replaceChildren(...(n ? choices(q, questions, n, r) : []).map((w) =>
     Object.assign(document.createElement("button"), { type: "button", textContent: head ? w[0].toUpperCase() + w.slice(1) : w })));
   input.value = "";
+  input.classList.remove("diffed");
+  $("b-line").querySelector(".diff")?.remove();
   input.placeholder = n ? "" : q.cue ?? "";
   input.readOnly = false;
   // 長文は空欄ごとに入力欄を置く。候補はフォーカスした空欄の下に出す (下の focusin)。
@@ -245,7 +257,10 @@ $("form").onsubmit = (e) => {
         const ans = q.blanks[i][0];
         const r = grade(b.value, [ans]);
         put(i, b, r);
-        if (r !== "correct") b.after(span("fix", ans));
+        if (r !== "correct") {
+          b.after(span("fix", ans));
+          showDiff(b, ans, bucket(r));
+        }
         b.readOnly = true;
       });
     } else {
@@ -266,7 +281,7 @@ $("form").onsubmit = (e) => {
     input.placeholder = "";
     // 部分正解なら、書こうとした答え (別解に寄せて書いたときはその別解) を出す
     const near = r === "wrong" ? undefined : q.answers.find((a) => grade(input.value, [a]) === r);
-    if (r !== "correct") $("fix").textContent = near ?? q.answers[0];
+    if (r !== "correct") showDiff(input, ($("fix").textContent = near ?? q.answers[0]), bucket(r));
     const why = { case: "大文字・小文字違い", accent: "アクサン違い", wrong: "不正解" }[r];
     // 不正解のとき、語群のある形式は先頭の答えだけ出す。別解 (語群にない動詞など) は採点では通すが、出すと「語群から選ぶ」と食い違う
     const shown = near ? [near] : types[q.type].choices ? q.answers.slice(0, 1) : q.answers;

@@ -153,6 +153,12 @@
   [data-result="correct"] #answer { color: var(--ok); border-color: var(--ok); }
   [data-result="partial"] #answer { color: var(--part); border-color: var(--part); }
   [data-result="wrong"] #answer { color: var(--ng); border-color: var(--ng); text-decoration: line-through; }
+  /* 間違えた答えは input の代わりに .diff を見せ、違っている語だけ色を付ける (app.js の showDiff)。input はフォーカスを残したまま見えなくする */
+  .diff { margin: 0 .15em; padding: 0 .15em; border-bottom: 2px solid var(--ng); }
+  .diff.partial { border-color: var(--part); }
+  .diff .partial { color: var(--part); }
+  .diff .wrong { color: var(--ng); text-decoration: line-through; }
+  input.diffed { position: absolute; width: 0 !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; opacity: 0; pointer-events: none; }
   #fix, .fix { color: var(--ok); }
   #fix:not(:empty), .fix { margin-right: .15em; }
 

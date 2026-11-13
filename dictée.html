@@ -112,7 +112,7 @@ const ROUNDS = ["normal", "normal", "slow", "normal"];
 const LABEL = { normal: "ふつう", slow: "ゆっくり" };
 // ゆっくりは区切り (/) ごとに読み、句読点を言って、書く間を空ける。
 // 間は公式の音声 (区切りごとに 10 秒前後) に合わせた目安。短すぎたら pause を伸ばす
-const RATE = { normal: 0.85, slow: 0.7 };
+const RATE = { normal: 0.75, slow: 0.6 };
 const pause = (chunk) => 3000 + chunk.length * 300; // ms
 const GAP = 4000; // 回と回の間
 const PUNCT = { ".": "point", ",": "virgule", "?": "point d'interrogation", "!": "point d'exclamation" };

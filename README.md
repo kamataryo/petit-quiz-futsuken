@@ -156,3 +156,8 @@ textarea に書いて「答え合わせ」を押すと、語ごとに比べる (
 ```sh
 pushd assets && for f in ogp:1200,630 icon:512,512; do n=${f%%:*}; "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --hide-scrollbars --force-device-scale-factor=1 --virtual-time-budget=5000 --window-size=${f#*:} --screenshot="$PWD/$n.png" "file://$PWD/$n.html"; done; popd
 ```
+
+## 作問で避けること
+
+犬や猫などのペット・動物がひどい目に遭う文 (事故、けが、病気、死、迷子、捨てられるなど) は出さない。
+`vars` で主語や目的語を入れ替える問題は、入れ替えたどの組み合わせでもそうならないようにする。人が遭う分は構わない。

@@ -216,7 +216,7 @@
 
   /* Enter の代わりのボタン。画面の下端に固定し、キーボードが出たら app.js でその上まで持ち上げる。
      答え合わせの前は「回答する」、あとは「次にすすむ」だけを出す */
-  #actions { position: fixed; left: 0; right: 0; bottom: 0; padding: .6rem 1rem; background: var(--paper); border-top: 1px solid var(--rule); }
+  #actions { position: fixed; left: 0; right: 0; bottom: 0; padding: .6rem 1rem calc(.6rem + var(--bar, 0px)); background: var(--paper); border-top: 1px solid var(--rule); }
   #actions > button { display: block; width: 100%; max-width: 44rem; margin: 0 auto; padding: .85rem; font: 600 1.15rem var(--body); color: var(--paper); background: var(--ink); border: 0; border-radius: .5rem; cursor: pointer; }
   main[data-result] ~ #actions #submit, main:not([data-result]) ~ #actions #next, main[hidden] ~ #actions { display: none; }
   /* 押せないときはタップを下の #actions に通す。そこで mousedown を止めているので、入力欄からフォーカスが外れずキーボードも閉じない */

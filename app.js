@@ -312,10 +312,21 @@ $("keys").onclose = () => input.focus();
 // 回答する・次にすすむはどちらもフォームの送信ボタン。onsubmit が採点か次へかを決める (next() はタップの中で focus するので、キーボードもまた開く)
 // 押してもフォーカスを入力欄から動かさず、キーボードを閉じない
 $("actions").onmousedown = (e) => e.preventDefault();
-// iOS はキーボードが出ても画面 (layout viewport) が縮まず、下端に固定したボタンが隠れる。見えている範囲の下端まで持ち上げる
-const lift = () => { $("actions").style.transform = `translateY(${Math.min(0, vv.offsetTop + vv.height - innerHeight)}px)`; };
+// iOS はキーボードが出ても画面 (layout viewport) が縮まず、下端に固定したボタンが隠れる。見えている範囲の下端まで持ち上げる。
+// iOS 26 からはキーボードの上の帯 (∧ ∨ ✓) がページの上に浮いて重なり、見えている範囲 (visualViewport) には入らない。
+// 下端に合わせるだけだと帯の下に隠れるので、キーボードが出ている間は帯の分だけ下を空ける。
+// iOS 26 かどうかは UA では分からない (版が 18 のまま) ので、Safari 26 で入った anchor-name があるかで見る
+const BAR = navigator.maxTouchPoints > 1 && /iPhone|iPad|Macintosh/.test(navigator.userAgent) && CSS.supports("anchor-name: --a") ? 56 : 0;
+const lift = () => {
+  const s = $("actions").style;
+  s.setProperty("--bar", `${innerHeight - vv.height > 100 ? BAR : 0}px`);
+  s.transform = `translateY(${Math.min(0, vv.offsetTop + vv.height - innerHeight)}px)`;
+};
 vv.addEventListener("resize", lift);
 vv.addEventListener("scroll", lift);
+// フォーカスで iOS が画面を送ったときは visualViewport の scroll が来ないことがあり、ボタンが前の位置に残る
+addEventListener("scroll", lift, { passive: true });
+addEventListener("focusin", lift);
 
 $("mode").onclick = () => {
   state.mode = state.mode === "missed" ? "all" : "missed";

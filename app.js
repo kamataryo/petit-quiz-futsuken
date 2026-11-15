@@ -24,12 +24,17 @@ const blanks = () => [...$("passage").querySelectorAll("input")];
 const span = (className, textContent) => Object.assign(document.createElement("span"), { className, textContent });
 // grade の結果を3段に畳む。case (大文字小文字だけ違う) と accent (アクサンだけ違う) は部分正解
 const bucket = (r) => (r === "correct" || r === "wrong" ? r : "partial");
-// 間違えた答えは、書いた語のうち違っている語だけに色を付けて見せる (合っている語はそのまま)。input の中は一部だけ色を変えられないので、
-// 同じ見た目の span を隣に置いて input は見えなくする。input は消さない (フォーカスが外れてスマホのキーボードが閉じる)
+// 間違えた答えは、書いた語のうち違っている語だけに色を付け、そのすぐあとに正しい語を緑で見せる (合っている語はそのまま。繰り返さない)。
+// 例: ont baissés → ont [baissés に取り消し線] [baissé 緑]。書き落とした語も、あるべき場所に緑で入る。
+// input の中は一部だけ色を変えられないので、同じ見た目の span を隣に置いて input は見えなくする。input は消さない (フォーカスが外れてスマホのキーボードが閉じる)
 const showDiff = (el, ans, r) => {
   const s = span(`diff ${r}`, "");
-  diffWords(el.value, ans).filter((w) => w.input).forEach((w, i) => {
-    s.append(i ? " " : "", w.r === "correct" ? w.input : span(w.r === "extra" ? "wrong" : "partial", w.input));
+  diffWords(el.value, ans).forEach((w, i) => {
+    if (i) s.append(" ");
+    if (w.r === "correct") return s.append(w.input);
+    if (w.input) s.append(span(w.r === "extra" ? "wrong" : "partial", w.input));
+    if (w.input && w.word) s.append(" ");
+    if (w.word) s.append(span("fix", w.word));
   });
   el.classList.add("diffed");
   el.after(s);
@@ -110,7 +115,7 @@ function next() {
   $("a-line").hidden = $("tag-b").hidden = !q.a;
   // 入力欄は DOM から外さずに前後の文だけ差し替える。外すとスマホのキーボードが閉じる
   [$("before").textContent, $("after").textContent] = nb(q.text).split("___");
-  $("fix").textContent = $("result").textContent = $("ja").textContent = $("note").textContent = "";
+  $("result").textContent = $("ja").textContent = $("note").textContent = "";
   // 文頭の空欄では語群も大文字で始める。押して入れた語が大文字・小文字違いにならないように
   const head = atHead(q.text);
   // 大文字小文字も採点するので、文頭の空欄だけスマホのキーボードを大文字から始める
@@ -258,7 +263,6 @@ $("form").onsubmit = (e) => {
         const r = grade(b.value, [ans]);
         put(i, b, r);
         if (r !== "correct") {
-          b.after(span("fix", ans));
           showDiff(b, ans, bucket(r));
         }
         b.readOnly = true;
@@ -281,7 +285,7 @@ $("form").onsubmit = (e) => {
     input.placeholder = "";
     // 部分正解なら、書こうとした答え (別解に寄せて書いたときはその別解) を出す
     const near = r === "wrong" ? undefined : q.answers.find((a) => grade(input.value, [a]) === r);
-    if (r !== "correct") showDiff(input, ($("fix").textContent = near ?? q.answers[0]), bucket(r));
+    if (r !== "correct") showDiff(input, near ?? q.answers[0], bucket(r));
     const why = { case: "大文字・小文字違い", accent: "アクサン違い", wrong: "不正解" }[r];
     // 不正解のとき、語群のある形式は先頭の答えだけ出す。別解 (語群にない動詞など) は採点では通すが、出すと「語群から選ぶ」と食い違う
     const shown = near ? [near] : types[q.type].choices ? q.answers.slice(0, 1) : q.answers;

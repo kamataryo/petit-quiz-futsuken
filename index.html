@@ -159,8 +159,7 @@
   .diff .partial { color: var(--part); }
   .diff .wrong { color: var(--ng); text-decoration: line-through; }
   input.diffed { position: absolute; width: 0 !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; opacity: 0; pointer-events: none; }
-  #fix, .fix { color: var(--ok); }
-  #fix:not(:empty), .fix { margin-right: .15em; }
+  .fix { color: var(--ok); }
 
   #choices { display: flex; flex-wrap: wrap; gap: .5rem; }
   /* 長文の候補。フォーカスした空欄の候補を、下端の #actions の中 (回答するの上) に並べる。空欄の下に重ねると続きの文が読めなくなる */
@@ -250,7 +249,7 @@
     <form id="form">
       <p id="passage" hidden></p>
       <ol id="claims"></ol>
-      <p id="b-line" class="line"><b id="tag-b" class="tag">B</b><span><span id="before"></span><span class="paren">(</span><input id="answer" lang="fr" aria-label="答え" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span id="fix"></span><span class="paren">)</span><span id="after"></span></span></p>
+      <p id="b-line" class="line"><b id="tag-b" class="tag">B</b><span><span id="before"></span><span class="paren">(</span><input id="answer" lang="fr" aria-label="答え" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span class="paren">)</span><span id="after"></span></span></p>
     </form>
   </div>
   <!-- 判定と解説は文のすぐ下に出す。語群の下だとスマホでは画面の外になる -->

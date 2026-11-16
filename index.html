@@ -159,8 +159,7 @@
   .diff .partial { color: var(--part); }
   .diff .wrong { color: var(--ng); text-decoration: line-through; }
   input.diffed { position: absolute; width: 0 !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; opacity: 0; pointer-events: none; }
-  #fix, .fix { color: var(--ok); }
-  #fix:not(:empty), .fix { margin-right: .15em; }
+  .fix { color: var(--ok); }
 
   #choices { display: flex; flex-wrap: wrap; gap: .5rem; }
   /* 長文の候補。フォーカスした空欄の候補を、下端の #actions の中 (回答するの上) に並べる。空欄の下に重ねると続きの文が読めなくなる */
@@ -216,7 +215,7 @@
 
   /* Enter の代わりのボタン。画面の下端に固定し、キーボードが出たら app.js でその上まで持ち上げる。
      答え合わせの前は「回答する」、あとは「次にすすむ」だけを出す */
-  #actions { position: fixed; left: 0; right: 0; bottom: 0; padding: .6rem 1rem; background: var(--paper); border-top: 1px solid var(--rule); }
+  #actions { position: fixed; left: 0; right: 0; bottom: 0; padding: .6rem 1rem calc(.6rem + var(--bar, 0px)); background: var(--paper); border-top: 1px solid var(--rule); }
   #actions > button { display: block; width: 100%; max-width: 44rem; margin: 0 auto; padding: .85rem; font: 600 1.15rem var(--body); color: var(--paper); background: var(--ink); border: 0; border-radius: .5rem; cursor: pointer; }
   main[data-result] ~ #actions #submit, main:not([data-result]) ~ #actions #next, main[hidden] ~ #actions { display: none; }
   /* 押せないときはタップを下の #actions に通す。そこで mousedown を止めているので、入力欄からフォーカスが外れずキーボードも閉じない */
@@ -250,7 +249,7 @@
     <form id="form">
       <p id="passage" hidden></p>
       <ol id="claims"></ol>
-      <p id="b-line" class="line"><b id="tag-b" class="tag">B</b><span><span id="before"></span><span class="paren">(</span><input id="answer" lang="fr" aria-label="答え" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span id="fix"></span><span class="paren">)</span><span id="after"></span></span></p>
+      <p id="b-line" class="line"><b id="tag-b" class="tag">B</b><span><span id="before"></span><span class="paren">(</span><input id="answer" lang="fr" aria-label="答え" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><span class="paren">)</span><span id="after"></span></span></p>
     </form>
   </div>
   <!-- 判定と解説は文のすぐ下に出す。語群の下だとスマホでは画面の外になる -->

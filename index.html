@@ -69,6 +69,8 @@
   /* 見出しと成績。成績は「最後に答えた結果」を問題ごとに数えたもの。下の帯は全問に対する割合 */
   header { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: .9rem 1rem; }
   h1 { font: italic 500 1.3rem var(--display); margin: 0; }
+  /* 級の切り替え。16px 未満だと iOS がズームする */
+  #level { margin-left: .5rem; padding: .15rem .3rem; font: 1rem var(--body); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: .4rem; vertical-align: middle; }
   #stats { display: flex; gap: 1.25rem; margin: 0; }
   #stats div { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; }
   #stats dt { font-size: .7rem; color: var(--ink-soft); white-space: nowrap; }
@@ -232,7 +234,7 @@
 </style>
 
 <header>
-  <h1>Petit Quiz Futsuken</h1>
+  <h1>Petit Quiz Futsuken <select id="level" aria-label="級"></select></h1>
   <dl id="stats" aria-live="polite">
     <div class="ok"><dt>正解</dt><dd id="n-correct">0</dd></div>
     <div class="part"><dt>部分正解</dt><dd id="n-partial">0</dd></div>

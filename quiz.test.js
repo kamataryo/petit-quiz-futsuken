@@ -40,6 +40,7 @@ test("シードの問題が出題できる形になっている", () => {
     assert.ok((q.answers ?? q.blanks ?? q.claims).length && (q.hint || q.ja || q.a), q.text);
     if (q.type === "word") assert.ok(q.answers.every((a) => a.startsWith(q.cue)), q.text);
     if (q.type === "verb") assert.ok(q.cue && q.a, q.text);
+    if (q.type === "expr") assert.ok(q.hint && !/\s/.test(q.answers.join("")), q.text); // 訳つきで 1 語
     // 語群のある問題の cue は「形を変えて書く」印。そのままの形が答えなら cue は要らない
     if (types[q.type].choices && q.cue) assert.ok(!q.answers.some((a) => a.toLowerCase() === q.cue), q.id);
   }

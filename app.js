@@ -43,16 +43,30 @@ const MARK = { correct: "◎", partial: "△", wrong: "×" };
 // フランス語は ? ! : ; » の前と « のあとに空白を置く。記号だけ別の行に落ちないよう、改行しない細い空白にする
 const nb = (s) => s?.replace(/ ([?!:;»])/g, " $1").replace(/« /g, "« ");
 
-// 級は ?level=pre2 で選ぶ。画面での切り替えはまだない
-const level = new URLSearchParams(location.search).get("level") ?? Object.keys(levels)[0];
-const pool = questions.filter((x) => x.level === level);
-
-// 記録は問題ごとの最後の結果 (id → grade の結果) と出題モード (all / missed) と乱数の種。
-// 種はリセットするまで変えない。出題の順も、人名や数の入れ替えも、語群もこの種で決まり、開き直しても同じになる
+// 級は見出しの横の select で選び、localStorage に覚える (ないときは levels の先頭)。
+// 切り替えたら読み込み直す。問題も記録もここで級ごとに決めているので、それでぜんぶ入れ替わる
 const KEY = "petit-quiz-futsuken";
+let level;
+try { level = localStorage.getItem(`${KEY}-level`); } catch {}
+if (!levels[level]) level = Object.keys(levels)[0];
+const pool = questions.filter((x) => x.level === level);
+$("level").replaceChildren(...Object.entries(levels).map(([value, textContent]) =>
+  Object.assign(document.createElement("option"), { value, textContent, selected: value === level })));
+$("level").onchange = (e) => {
+  try { localStorage.setItem(`${KEY}-level`, e.target.value); } catch {}
+  location.reload();
+};
+
+// 記録は問題ごとの最後の結果 (id → grade の結果) と出題モード (all / missed) と乱数の種。級ごとに別のキーに置く。
+// 種はリセットするまで変えない。出題の順も、人名や数の入れ替えも、語群もこの種で決まり、開き直しても同じになる
 const state = { results: {}, mode: "all", seed: Math.random() };
-try { Object.assign(state, JSON.parse(localStorage.getItem(KEY))); } catch {}
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+try {
+  // 級を分ける前の記録 (準2級しかなかった) は準2級のキーに移す
+  const old = localStorage.getItem(KEY);
+  if (old) { localStorage.setItem(`${KEY}-pre2`, old); localStorage.removeItem(KEY); }
+  Object.assign(state, JSON.parse(localStorage.getItem(`${KEY}-${level}`)));
+} catch {}
+const save = () => { try { localStorage.setItem(`${KEY}-${level}`, JSON.stringify(state)); } catch {} };
 save(); // 答える前に閉じても種が残るように
 const rand = (k) => seeded(`${state.seed}-${k}`);
 // 長文は空欄ごと (内容一致は文ごと) に `${id}-${番号}` で記録し、成績でも1つを1問と数える
@@ -340,7 +354,7 @@ $("mode").onclick = () => {
 };
 
 $("reset").onclick = () => {
-  if (!confirm("正解・不正解の記録をすべて消して、全問を最初から出題します。よろしいですか？")) return input.focus();
+  if (!confirm(`${levels[level]}の正解・不正解の記録をすべて消して、全問を最初から出題します。よろしいですか？`)) return input.focus();
   state.results = {};
   state.mode = "all"; // 記録を消すと復習する問題はないので、全問にもどす
   state.seed = Math.random();
